@@ -172,6 +172,21 @@
   .lmember .nm{flex:1;font-size:14px;font-weight:600}
   .lmember .lv{font-size:12px;color:var(--soft);font-weight:700;white-space:nowrap}
   .lmember.beat .nm{color:var(--soft);text-decoration:line-through}
+
+  .sndbtn{width:34px;height:34px;flex:0 0 auto;padding:0;border-radius:8px;
+          border:2px solid var(--onshell);background:transparent;text-decoration:none;
+          display:inline-flex;align-items:center;justify-content:center;
+          transition:background .12s,opacity .12s}
+  .sndbtn svg{width:18px;height:18px;display:block}
+  .sndbtn .stem{fill:none;stroke:var(--onshell);stroke-width:1.8;
+                stroke-linecap:round;stroke-linejoin:round}
+  .sndbtn .head{fill:var(--onshell)}
+  .sndbtn .slash{display:none;stroke:var(--onshell);stroke-width:2.2;stroke-linecap:round}
+  .sndbtn.on{background:var(--onshell)}
+  .sndbtn.on .stem{stroke:var(--shell)}
+  .sndbtn.on .head{fill:var(--shell)}
+  .sndbtn.off{background:transparent;opacity:.55}
+  .sndbtn.off .slash{display:block}
 </style>
 </head>
 <body>
@@ -910,8 +925,8 @@ function render(){
   h += `</div><footer style="color:var(--onshell);border-top-color:var(--onshell)">
           <button id="export">Export backup</button>
           <button id="import">Import</button>
-          <button id="mute">${muted ? "Sound off" : "Sound on"}</button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 6</span>
+          <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 7</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -1050,12 +1065,18 @@ function wire(){
     muted = !muted;
     try { localStorage.setItem("nz-mute", muted ? "1" : "0"); } catch(e){}
     if (!muted) SFX.open();
-    mb.textContent = muted ? "Sound off" : "Sound on";
+    mb.classList.toggle("on", !muted);
+    mb.classList.toggle("off", muted);
+    mb.title = muted ? "Sound off" : "Sound on";
+    mb.setAttribute("aria-label", mb.title);
+    mb.setAttribute("aria-pressed", muted ? "false" : "true");
     const st0 = document.getElementById("status");
     if (st0){
       const c0 = _audio();
       st0.className = "";
-      st0.textContent = "audio " + (c0 ? c0.state : "unavailable") + " \u00b7 " + Object.keys(_buf).length + "/6 \u00b7 t" + (c0 ? c0.currentTime.toFixed(1) : "-") + (_elMode ? " \u00b7 element" : "");
+      const _m = "audio " + (c0 ? c0.state : "unavailable") + " \u00b7 " + Object.keys(_buf).length + "/6 \u00b7 t" + (c0 ? c0.currentTime.toFixed(1) : "-") + (_elMode ? " \u00b7 element" : "");
+            st0.textContent = _m;
+            setTimeout(() => { if (st0.textContent === _m) st0.textContent = ""; }, 5000);
     }
   };
   const im = $("#import"), f = $("#file");
