@@ -192,6 +192,9 @@
                text-decoration-color:var(--rule)}
   .wasline{font-size:11.5px;color:var(--soft);font-style:italic;margin-top:3px}
   .evobox{margin-top:9px;gap:8px}
+
+  .causeline{display:block;width:100%;text-align:left;text-decoration:underline dotted;
+             text-decoration-color:var(--rule);text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -607,11 +610,11 @@ function toggleGift(id){
   if (!x) return;
   if (x.dead){
     gd().grave = (gd().grave || []).filter(z => z.id !== x.gid);
-    x.dead = false; x.gid = undefined; SFX.tap();
+    x.dead = false; x.gid = undefined; ui.gcause = null; SFX.tap();
   } else {
     const gid = Date.now() + Math.random();
     gd().grave.push({ id:gid, species:x.species, from:x.caught || "", route:"Gift", cause:x.cause || "", attempt:gd().attempt || 1 });
-    x.dead = true; x.gid = gid; SFX.dead();
+    x.dead = true; x.gid = gid; ui.gcause = String(id); SFX.dead();
   }
   save(); render();
 }
@@ -800,8 +803,16 @@ function render(){
               </div>`;
       }
 
-      if (e.dead)
-        h += `<input class="cause" data-cause="${esc(e.route)}" placeholder="What killed it" value="${esc(e.cause||"")}">`;
+      if (e.dead){
+        if (ui.cause === e.route)
+          h += `<div class="evobox row">
+                  <input id="causein" class="grow cause" style="margin-top:0" data-cause="${esc(e.route)}" placeholder="What killed it" value="${esc(e.cause||"")}">
+                  <button class="log" data-causedone="1">Done</button>
+                </div>`;
+        else
+          h += '<button class="wasline causeline" data-causeopen="' + esc(e.route) + '">'
+             + (e.cause ? "killed by " + esc(e.cause) : "add what killed it") + '</button>';
+      }
 
       h += "</div>";
     });
@@ -832,8 +843,16 @@ function render(){
                 <input id="gevoin" class="grow" placeholder="Evolved into what?" value="">
                 <button class="log" data-gevocommit="${x.id}">Evolve</button>
               </div>`;
-      if (x.dead)
-        h += `<input class="cause" data-giftcause="${x.id}" placeholder="What killed it" value="${esc(x.cause||"")}">`;
+      if (x.dead){
+        if (ui.gcause === String(x.id))
+          h += `<div class="evobox row">
+                  <input id="gcausein" class="grow cause" style="margin-top:0" data-giftcause="${x.id}" placeholder="What killed it" value="${esc(x.cause||"")}">
+                  <button class="log" data-causedone="1">Done</button>
+                </div>`;
+        else
+          h += '<button class="wasline causeline" data-gcauseopen="' + x.id + '">'
+             + (x.cause ? "killed by " + esc(x.cause) : "add what killed it") + '</button>';
+      }
       h += `</div>`;
     });
     h += `<div class="row" style="margin-top:16px">
@@ -948,7 +967,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 12</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 13</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -980,7 +999,8 @@ function wire(){
   all("[data-clear]",  b => b.onclick = () => clearArea(b.dataset.clear));
   all("[data-toggle]", b => b.onclick = () => {
     const r = b.dataset.toggle;
-    if ((gd().log[r]||{}).dead){ markAlive(r); SFX.tap(); } else { markDead(r); SFX.dead(); }
+    if ((gd().log[r]||{}).dead){ markAlive(r); ui.cause = null; SFX.tap(); }
+    else { markDead(r); ui.cause = r; SFX.dead(); }
     save(); render();
   });
   const rb = $("#restart");
@@ -1106,6 +1126,24 @@ function wire(){
   if (evoin) evoin.onkeydown = ev => { if (ev.key === "Enter"){ const b2=$("[data-evocommit]"); if (b2) b2.click(); } };
   const gevoin = $("#gevoin");
   if (gevoin) gevoin.onkeydown = ev => { if (ev.key === "Enter"){ const b2=$("[data-gevocommit]"); if (b2) b2.click(); } };
+
+  all("[data-causeopen]", b => b.onclick = () => {
+    const r = b.dataset.causeopen;
+    ui.cause = ui.cause === r ? null : r; ui.gcause = null;
+    SFX.tap(); render();
+  });
+  all("[data-gcauseopen]", b => b.onclick = () => {
+    const id = b.dataset.gcauseopen;
+    ui.gcause = ui.gcause === id ? null : id; ui.cause = null;
+    SFX.tap(); render();
+  });
+  all("[data-causedone]", b => b.onclick = () => {
+    ui.cause = null; ui.gcause = null; SFX.tap(); render();
+  });
+  const cin = $("#causein") || $("#gcausein");
+  if (cin) cin.onkeydown = ev => {
+    if (ev.key === "Enter"){ ui.cause = null; ui.gcause = null; render(); }
+  };
 
   const ex = $("#export");
   if (ex) ex.onclick = () => {
