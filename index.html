@@ -453,13 +453,16 @@ function _audio(){
   }
   return _ac;
 }
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden){ const c=_audio(); if (c && c.state!=="running") c.resume(); }
+});
 document.addEventListener("pointerdown", () => {
-  const c=_audio(); if (c && c.state==="suspended") c.resume();
+  const c=_audio(); if (c && c.state!=="running") c.resume();
 }, true);
 function play(name){
   if (muted) return;
   const c=_audio(); if (!c) return;
-  if (c.state==="suspended") c.resume();
+  if (c.state!=="running") c.resume();
   const b=_buf[name];
   if (!b){
     try { const el=new Audio(SND_DATA[name]); el.volume=0.8; el.play().catch(()=>{}); } catch(e){}
