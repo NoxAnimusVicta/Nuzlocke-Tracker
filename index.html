@@ -271,7 +271,7 @@ const TYPE = {
 };
 
 const GAMES = [
- { id:"firered", code:"FR", name:"FireRed", region:"Kanto",
+ { id:"firered", code:"FR", name:"Fire Red", region:"Kanto",
    gyms:[["Brock","Rock",14],["Misty","Water",21],["Lt. Surge","Electric",24],
          ["Erika","Grass",29],["Koga","Poison",43],["Sabrina","Psychic",43],
          ["Blaine","Fire",47],["Giovanni","Ground",50]],
@@ -284,7 +284,7 @@ const GAMES = [
      "Route 16","Route 17","Route 18","Safari Zone","Route 19","Route 20","Seafoam Islands",
      "Route 21","Pokémon Mansion","Power Plant","Route 23","Victory Road","Cerulean Cave"] },
 
- { id:"soulsilver", code:"SS", name:"SoulSilver", region:"Johto",
+ { id:"soulsilver", code:"SS", name:"Soul Silver", region:"Johto",
    gyms:[["Falkner","Flying",13],["Bugsy","Bug",17],["Whitney","Normal",19],
          ["Morty","Ghost",25],["Chuck","Fighting",31],["Jasmine","Steel",35],
          ["Pryce","Ice",34],["Clair","Dragon",41]],
@@ -379,15 +379,15 @@ const RULES = [
  ["Death","Faints once, dead forever. Never healed, never withdrawn, never used again."],
   ["The Dead box","Nothing is ever released. Every death goes into a PC box named Dead and stays there for the rest of the run, so you can walk the graveyard before you finish each game."],
  ["End condition","The run ends only when every Pokémon you own is dead — box included. Losing your active six means rebuilding from reserves, not restarting."],
- ["Losing a game","Total extinction restarts that game only. Games already cleared stay cleared, and you never drop back down the gauntlet. Lose Emerald and you start Emerald, not FireRed. Each game has its own graveyard. A restart is a new attempt, so it resets — the graveyard you review at the end is the one from the run you finished."],
+ ["Losing a game","Total extinction restarts that game only. Games already cleared stay cleared, and you never drop back down the gauntlet. Lose Emerald and you start Emerald, not Fire Red. Each game has its own graveyard. A restart is a new attempt, so it resets — the graveyard you review at the end is the one from the run you finished."],
  ["Level cap","Nothing may exceed the ace level of the next Gym Leader. Grind freely up to it."],
  ["League cap","The Elite Four and the Champion share one cap, taken from the last Elite Four member. There is no box access once you walk in, so levels gained inside the League do not count against it."],
- ["Battle style","Set mode. No Exp. Share."],
- ["Pokéwalker","Banned. It hands you free encounters and free items. SoulSilver only."],
+ ["Battle style","Set mode. No free switch when the opponent sends something out, so every lead is a commitment."],
+ ["Pokéwalker","Banned. It hands you free encounters and free items. Soul Silver only."],
  ["Items","Two healing items per battle. None against Gym Leaders, the Elite Four or Rivals."],
- ["Gifts","Gift Pokémon count as that area's encounter."],
+ ["Gifts","Gift and static Pokémon are free and cost no area encounter. The dupes clause still applies, they die like anything else, and they belong in the Gifts list so the graveyard stays complete."],
   ["Legendaries","Repelling your way to a Legendary is legal — it breaks none of the core rules. But you get one attempt at it. Catch it first try and it is yours to use. Run out of balls, or fail to catch it, and you must knock it out. There are no save reloads. Anything it kills stays dead, and if it takes your whole party that is a wipe like any other."],
- ["Gauntlet","Beat each game before starting the next. FireRed, SoulSilver, Emerald, Platinum, Black, White 2, Unbound."]
+ ["Gauntlet","Beat each game before starting the next. Fire Red, Soul Silver, Emerald, Platinum, Black, White 2, Unbound."]
 ];
 
 
@@ -455,7 +455,7 @@ const SFX = {
 
 /* ---------------- state ---------------- */
 const KEY = "nuzlocke-gauntlet";
-const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1 });
+const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1, gifts:[] });
 
 let S = { active:"firered", games:{} };
 GAMES.forEach(g => S.games[g.id] = freshGame());
@@ -505,12 +505,43 @@ const pool = r => (ENCOUNTERS[S.active] || {})[r] || [];
 function entries(){
   return routesOf().map(r => Object.assign({ route:r }, gd().log[r] || {}));
 }
+const giftsOf = () => (gd().gifts = gd().gifts || []);
+function addGift(species){
+  if (!species) return;
+  giftsOf().push({ id: Date.now() + Math.random(), species: species, dead:false, cause:"" });
+  SFX.catch(); save(); render();
+}
+function removeGift(id){
+  const gs = giftsOf(), i = gs.findIndex(x => String(x.id) === String(id));
+  if (i < 0) return;
+  if (gs[i].gid) gd().grave = (gd().grave || []).filter(x => x.id !== gs[i].gid);
+  gs.splice(i, 1); save(); render();
+}
+function toggleGift(id){
+  const x = giftsOf().find(y => String(y.id) === String(id));
+  if (!x) return;
+  if (x.dead){
+    gd().grave = (gd().grave || []).filter(z => z.id !== x.gid);
+    x.dead = false; x.gid = undefined; SFX.tap();
+  } else {
+    const gid = Date.now() + Math.random();
+    gd().grave.push({ id:gid, species:x.species, route:"Gift", cause:x.cause || "", attempt:gd().attempt || 1 });
+    x.dead = true; x.gid = gid; SFX.dead();
+  }
+  save(); render();
+}
 function livingLines(){
   const m = new Map();          // evolution-chain key -> the species you hold from it
   entries().forEach(e => {
     if (e.species && !e.dead){
       const k = lineKey(e.species);
       if (!m.has(k)) m.set(k, e.species.trim());
+    }
+  });
+  (gd().gifts || []).forEach(x => {
+    if (x.species && !x.dead){
+      const k = lineKey(x.species);
+      if (!m.has(k)) m.set(k, x.species.trim());
     }
   });
   return m;
@@ -529,7 +560,7 @@ function markAlive(r){
 }
 function restartGame(){
   const d = gd();
-  d.log = {}; d.badges = 0; d.top = ""; d.grave = []; d.attempt = (d.attempt || 1) + 1;
+  d.log = {}; d.badges = 0; d.top = ""; d.grave = []; d.gifts = []; d.attempt = (d.attempt || 1) + 1;
   ui.open = null; ui.filter = "todo";
   save(); render();
 }
@@ -553,7 +584,8 @@ function pick(r, species){
 function render(){
   const g = game(), d = gd(), rs = routesOf(), es = entries();
   const living = livingLines();
-  const caught = es.filter(e => e.species);
+  const gifts = (d.gifts || []).filter(x => x.species);
+  const caught = es.filter(e => e.species).concat(gifts);
   const dead = caught.filter(e => e.dead);
   const alive = caught.length - dead.length;
   const used = es.filter(e => e.species || e.lost).length;
@@ -608,7 +640,7 @@ function render(){
     h += `<div class="alert"><div style="margin-bottom:8px">Everything is dead. The games behind ${esc(g.name)} stay cleared.</div>
           <button id="restart" class="log" style="background:#fff;color:var(--dead);border-color:#fff">Start ${esc(g.name)} again</button></div>`;
 
-  const tabs = [["areas","Areas"],["caps","Caps"],["rules","Rules"],["grave","Graveyard"]];
+  const tabs = [["areas","Areas"],["gifts","Gifts"],["caps","Caps"],["rules","Rules"],["grave","Grave"]];
   h += '<div class="tabs">' + tabs.map(t =>
     `<button data-tab="${t[0]}" class="${ui.tab===t[0]?"on":""}">${t[1]}</button>`).join("") + "</div>";
 
@@ -669,6 +701,27 @@ function render(){
     h += `<div class="row" style="margin-top:16px">
             <input id="newarea" class="grow" placeholder="Add a missing area">
             <button id="addarea" class="log">Add</button>
+          </div>`;
+  }
+
+  if (ui.tab === "gifts"){
+    const gs = (d.gifts || []);
+    h += `<p class="small muted" style="margin:0 0 12px;max-width:62ch">Gifts, statics and fossils. They cost no area encounter, but the dupes clause still applies and they die like anything else.</p>`;
+    if (!gs.length)
+      h += `<p class="small muted" style="padding:8px 0">Nothing gifted in ${esc(g.name)} yet.</p>`;
+    gs.forEach(x => {
+      h += `<div class="area"><div class="row">
+              <span class="species ${x.dead?"dead":""} grow">${esc(x.species)}</span>
+              <button class="state ${x.dead?"dead":""}" data-gifttoggle="${x.id}">${x.dead?"Dead":"Alive"}</button>
+              <button class="x" data-giftdel="${x.id}">&times;</button>
+            </div>`;
+      if (x.dead)
+        h += `<input class="cause" data-giftcause="${x.id}" placeholder="What killed it" value="${esc(x.cause||"")}">`;
+      h += `</div>`;
+    });
+    h += `<div class="row" style="margin-top:16px">
+            <input id="newgift" class="grow" placeholder="Gift or static caught">
+            <button id="addgift" class="log">Add</button>
           </div>`;
   }
 
@@ -802,6 +855,20 @@ function wire(){
   };
   if (ab) ab.onclick = addArea;
   if (na) na.onkeydown = e => { if (e.key === "Enter") addArea(); };
+
+  all("[data-gifttoggle]", b => b.onclick = () => toggleGift(b.dataset.gifttoggle));
+  all("[data-giftdel]",    b => b.onclick = () => removeGift(b.dataset.giftdel));
+  all("[data-giftcause]",  i => i.oninput = () => {
+    const x = (gd().gifts||[]).find(y => String(y.id) === String(i.dataset.giftcause));
+    if (!x) return;
+    x.cause = i.value;
+    const ge = (gd().grave||[]).find(z => z.id === x.gid); if (ge) ge.cause = i.value;
+    save();
+  });
+  const ng = $("#newgift"), ag = $("#addgift");
+  const addG = () => { const v = (ng.value||"").trim(); if (v){ ng.value = ""; addGift(v); } };
+  if (ag) ag.onclick = addG;
+  if (ng) ng.onkeydown = e => { if (e.key === "Enter") addG(); };
 
   const ex = $("#export");
   if (ex) ex.onclick = () => {
