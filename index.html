@@ -140,6 +140,31 @@
   footer button{text-decoration:underline;text-underline-offset:3px;font-weight:600}
   #status{margin-left:auto}
   #status.err{color:var(--dead)}
+
+  .hof{background:var(--card);border:3px solid var(--live);border-radius:10px;overflow:hidden;margin-bottom:12px}
+  .hof .hd{background:var(--live);color:#fff;padding:10px 14px}
+  .hof .hd .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;opacity:.88}
+  .hof .hd .nm{font-size:20px;font-weight:800;line-height:1.15}
+  .hof .meta{display:flex;gap:16px;padding:9px 14px;border-bottom:2px dashed var(--rule);
+             font-size:12px;color:var(--soft);font-weight:700}
+  .hof ol{margin:0;padding:2px 14px 8px;list-style:none}
+  .hof li{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:2px dashed var(--rule)}
+  .hof li:last-child{border-bottom:0}
+  .hof li .n{font-size:11px;color:var(--soft);font-weight:700;min-width:12px}
+  .hof .foot{padding:2px 14px 12px}
+  .hof .foot button{font-size:12px;color:var(--soft);text-decoration:underline}
+  .gaunt{background:var(--card);border:3px solid var(--ink);border-radius:10px;padding:4px 14px 10px}
+  .gaunt .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
+              color:var(--soft);padding:10px 0 2px}
+  .gaunt .g{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:2px dashed var(--rule)}
+  .gaunt .g:last-child{border-bottom:0}
+  .gaunt .g .nm{flex:1;font-size:14px;font-weight:600}
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+        border:2px solid var(--rule);color:var(--soft);white-space:nowrap}
+  .pill.done{background:var(--live);border-color:var(--live);color:#fff}
+  .pill.now{border-color:var(--ink);color:var(--ink)}
+  .hofpick{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:2px dashed var(--rule)}
+  .hofpick:last-of-type{border-bottom:0}
 </style>
 </head>
 <body>
@@ -415,6 +440,8 @@ let _ac=null, _buf={}, _decoded=false;
 function _audio(){
   if(_ac) return _ac;
   try { _ac = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){ return null; }
+  try { const _b=_ac.createBuffer(1,1,22050), _s=_ac.createBufferSource();
+    _s.buffer=_b; _s.connect(_ac.destination); _s.start(0); } catch(e){}
   if(!_decoded){
     _decoded = true;
     Object.keys(SND_DATA).forEach(n => {
@@ -741,32 +768,28 @@ function render(){
   if (ui.tab === "hall"){
     const hof = d.hof;
     if (hof){
-      h += `<div class="box" style="border-color:var(--live);margin-bottom:14px">
-              <div class="row" style="align-items:baseline">
-                <span class="grow" style="font-size:19px;font-weight:800">Hall of Fame</span>
-                <span class="tiny muted">${esc(hof.date)}</span>
-              </div>
-              <p class="tiny muted" style="margin:2px 0 10px">Attempt ${hof.attempt} &middot; ${hof.deaths} lost along the way</p>`;
-      (hof.team||[]).forEach(t => {
-        h += `<div class="row" style="padding:5px 0">
-                <span class="species grow">${esc(t.species)}</span>
-                <span class="tiny muted">${esc(t.from)}</span>
-              </div>`;
+      h += `<div class="hof">
+              <div class="hd"><div class="lbl">Hall of Fame</div><div class="nm">${esc(g.name)}</div></div>
+              <div class="meta"><span>${esc(hof.date)}</span><span>Attempt ${hof.attempt}</span><span>${hof.deaths} lost</span></div>
+              <ol>`;
+      (hof.team||[]).forEach((t,i) => {
+        h += `<li><span class="n">${i+1}</span><span class="species grow">${esc(t.species)}</span><span class="tiny muted">${esc(t.from)}</span></li>`;
       });
-      h += `<button class="log" data-hofclear="1" style="margin-top:10px">Clear this record</button></div>`;
+      h += `</ol><div class="foot"><button data-hofclear="1">Clear this record</button></div></div>`;
     } else if (d.badges < 8){
-      h += `<p class="small muted" style="padding:12px 0;max-width:62ch">Win all eight badges and beat the League, then come back to log the team that finished ${esc(g.name)}.</p>`;
+      h += `<div class="box" style="margin-bottom:12px"><p class="small muted" style="margin:0">Win all eight badges and beat the League, then log the team that finished ${esc(g.name)}.</p></div>`;
     } else {
       const roster = livingRoster();
       const auto = roster.length <= 6;
       ui.hofPick = (ui.hofPick || []).filter(k => roster.some(x => x.species + "|" + x.from === k));
-      h += `<p class="small muted" style="margin:0 0 10px;max-width:62ch">${auto ? "Beat the Champion, then log the survivors." : "More than six alive &mdash; pick the six that fought."}</p>`;
-      if (!roster.length)
-        h += `<p class="small muted" style="padding:8px 0">Nothing is alive to enter the Hall.</p>`;
+      h += `<div class="box" style="margin-bottom:12px">
+              <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">Enter the Hall</div>
+              <p class="small muted" style="margin:6px 0 4px">${auto ? "Beat the Champion, then log the survivors." : "More than six alive &mdash; pick the six that fought."}</p>`;
+      if (!roster.length) h += `<p class="small muted" style="margin:8px 0 0">Nothing is alive to enter the Hall.</p>`;
       roster.forEach(x => {
         const key = x.species + "|" + x.from;
         const on = auto || ui.hofPick.indexOf(key) >= 0;
-        h += `<div class="row" style="padding:5px 0">
+        h += `<div class="hofpick">
                 <button class="log ${on?"on":""}" data-hofpick="${esc(key)}"${auto?" disabled":""}>${on?"In":"Out"}</button>
                 <span class="species grow">${esc(x.species)}</span>
                 <span class="tiny muted">${esc(x.from)}</span>
@@ -774,20 +797,22 @@ function render(){
       });
       if (roster.length){
         const n = auto ? roster.length : ui.hofPick.length;
-        h += `<button id="hofenter" class="log" style="margin-top:14px;background:var(--live);color:#fff;border-color:var(--live)"${(!auto && (n<1||n>6))?" disabled":""}>Beat the Champion &middot; log ${n}</button>`;
+        h += `<button id="hofenter" class="log" style="margin-top:14px;width:100%;background:var(--live);color:#fff;border-color:var(--live)"${(!auto && (n<1||n>6))?" disabled":""}>Beat the Champion &middot; log ${n}</button>`;
       }
+      h += `</div>`;
     }
-    h += `<div class="sectionhead row" style="align-items:baseline;margin-top:22px"><span class="grow">The gauntlet</span></div>`;
+    h += `<div class="gaunt"><div class="lbl">The gauntlet</div>`;
     GAMES.forEach((x,i) => {
       const gx = S.games[x.id] || {};
       const done = !!gx.hof;
       const started = !!(Object.keys(gx.log||{}).length || gx.badges || (gx.gifts||[]).length);
-      h += `<div class="row" style="padding:6px 0;opacity:${done?1:(started?0.85:0.45)}">
-              <div class="dot ${done?"on":""}" style="width:14px;height:14px;--dotc:${done?"#1E8E5A":"#B8B5A8"}"></div>
-              <span class="grow small">${i+1}. ${esc(x.name)}</span>
-              <span class="tiny muted">${done ? esc(gx.hof.date) : (started ? "in progress" : "not started")}</span>
+      h += `<div class="g">
+              <div class="dot ${done?"on":""}" style="width:16px;height:16px;--dotc:${done?"#1E8E5A":"#B8B5A8"}"></div>
+              <span class="nm">${i+1}. ${esc(x.name)}</span>
+              <span class="pill ${done?"done":(x.id===S.active?"now":"")}">${done ? esc(gx.hof.date) : (started ? "in progress" : "not started")}</span>
             </div>`;
     });
+    h += `</div>`;
   }
 
   if (ui.tab === "caps"){
