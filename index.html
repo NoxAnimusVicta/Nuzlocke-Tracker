@@ -430,8 +430,7 @@ const RULES = [
  ["Level cap","Nothing may exceed the ace level of the next Gym Leader. Grind freely up to it."],
  ["League cap","The Elite Four and the Champion share one cap, taken from the last Elite Four member. There is no box access once you walk in, so levels gained inside the League do not count against it."],
  ["Battle style","Set mode. No free switch when the opponent sends something out, so every lead is a commitment."],
- ["Pokéwalker","Banned. It hands you free encounters and free items. Soul Silver only."],
- ["Items","Two healing items per battle. None against Gym Leaders, the Elite Four or Rivals."],
+ ["Items","Two healing items per battle, no exceptions — Gym Leaders, the Elite Four and Rivals included. Anything that restores HP or clears a status counts: Potions, Antidotes, Burn Heals, Awakenings, Full Heals. Revives are banned outright, in battle and out of it — a faint is a death. Otherwise there is no limit outside battle. Heal as much as you like between fights, including between Elite Four members."],
  ["Gifts","Gift and static Pokémon are free and cost no area encounter. The dupes clause still applies, they die like anything else, and they belong in the Gifts list so the graveyard stays complete."],
   ["Legendaries","Repelling your way to a Legendary is legal — it breaks none of the core rules. But you get one attempt at it. Catch it first try and it is yours to use. Run out of balls, or fail to catch it, and you must knock it out. There are no save reloads. Anything it kills stays dead, and if it takes your whole party that is a wipe like any other."],
  ["Gauntlet","Beat each game before starting the next. Fire Red, Soul Silver, Emerald, Platinum, Black, White 2, Unbound."]
@@ -924,7 +923,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 10</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 11</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
