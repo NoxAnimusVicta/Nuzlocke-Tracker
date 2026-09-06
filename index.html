@@ -19,7 +19,7 @@
     --lens:#3FA9F5; --lensdark:#1C6FB5;
     --font:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,sans-serif;
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;touch-action:manipulation}
   html,body{background:var(--shell)}
   body{color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.35;-webkit-text-size-adjust:100%;
        background:linear-gradient(180deg,var(--shell) 0%,var(--shell2) 100%);min-height:100vh}
@@ -924,7 +924,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 9</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 10</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
