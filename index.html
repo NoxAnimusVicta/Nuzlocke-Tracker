@@ -187,6 +187,11 @@
   .sndbtn.on .head{fill:var(--shell)}
   .sndbtn.off{background:transparent;opacity:.55}
   .sndbtn.off .slash{display:block}
+
+  .species.evo{text-align:left;text-decoration:underline dotted;text-underline-offset:4px;
+               text-decoration-color:var(--rule)}
+  .wasline{font-size:11.5px;color:var(--soft);font-style:italic;margin-top:3px}
+  .evobox{margin-top:9px;gap:8px}
 </style>
 </head>
 <body>
@@ -556,7 +561,7 @@ function load(){
         const e = d.log[r];
         if (e && e.dead && e.species && !e.gid){
           e.gid = Date.now() + Math.random();
-          d.grave.push({ id:e.gid, species:e.species, route:r, cause:e.cause||"", attempt:d.attempt||1 });
+          d.grave.push({ id:e.gid, species:e.species, from:e.caught || "", route:r, cause:e.cause||"", attempt:d.attempt||1 });
         }
       });
     });
@@ -605,7 +610,7 @@ function toggleGift(id){
     x.dead = false; x.gid = undefined; SFX.tap();
   } else {
     const gid = Date.now() + Math.random();
-    gd().grave.push({ id:gid, species:x.species, route:"Gift", cause:x.cause || "", attempt:gd().attempt || 1 });
+    gd().grave.push({ id:gid, species:x.species, from:x.caught || "", route:"Gift", cause:x.cause || "", attempt:gd().attempt || 1 });
     x.dead = true; x.gid = gid; SFX.dead();
   }
   save(); render();
@@ -643,7 +648,7 @@ function graveyard(){ return (gd().grave || []).slice().reverse(); }
 function markDead(r){
   const e = gd().log[r] || {};
   const gid = Date.now() + Math.random();
-  gd().grave.push({ id:gid, species:e.species, route:r, cause:e.cause || "", attempt:gd().attempt || 1 });
+  gd().grave.push({ id:gid, species:e.species, from:e.caught || "", route:r, cause:e.cause || "", attempt:gd().attempt || 1 });
   gd().log[r] = Object.assign({}, e, { dead:true, gid:gid });
 }
 function markAlive(r){
@@ -759,11 +764,21 @@ function render(){
       if (e.lost)
         h += `<button class="small muted" style="font-style:italic" data-clear="${esc(e.route)}">lost</button>`;
       if (e.species){
-        h += `<span class="species ${e.dead?"dead":""}">${esc(e.species)}</span>
-              <button class="state ${e.dead?"dead":""}" data-toggle="${esc(e.route)}">${e.dead?"Dead":"Alive"}</button>
-              <button class="x" data-clear="${esc(e.route)}">&times;</button>`;
+        h += (e.dead
+               ? '<span class="species dead">' + esc(e.species) + '</span>'
+               : '<button class="species evo" data-evolve="' + esc(e.route) + '">' + esc(e.species) + '</button>')
+            + `<button class="state ${e.dead?"dead":""}" data-toggle="${esc(e.route)}">${e.dead?"Dead":"Alive"}</button>
+               <button class="x" data-clear="${esc(e.route)}">&times;</button>`;
       }
       h += "</div>";
+
+      if (e.caught && e.caught !== e.species)
+        h += `<div class="wasline">caught as ${esc(e.caught)}</div>`;
+      if (ui.evolve === e.route && e.species && !e.dead)
+        h += `<div class="evobox row">
+                <input id="evoin" class="grow" placeholder="Evolved into what?" value="">
+                <button class="log" data-evocommit="${esc(e.route)}">Evolve</button>
+              </div>`;
 
       if (isOpen){
         const p = pool(e.route);
@@ -803,11 +818,20 @@ function render(){
     if (!gs.length)
       h += `<p class="small muted" style="padding:8px 0">Nothing gifted in ${esc(g.name)} yet.</p>`;
     gs.forEach(x => {
-      h += `<div class="area"><div class="row">
-              <span class="species ${x.dead?"dead":""} grow">${esc(x.species)}</span>
-              <button class="state ${x.dead?"dead":""}" data-gifttoggle="${x.id}">${x.dead?"Dead":"Alive"}</button>
-              <button class="x" data-giftdel="${x.id}">&times;</button>
-            </div>`;
+      h += '<div class="area"><div class="row">'
+       + (x.dead
+           ? '<span class="species dead grow">' + esc(x.species) + '</span>'
+           : '<button class="species evo grow" data-gevolve="' + x.id + '">' + esc(x.species) + '</button>')
+       + `<button class="state ${x.dead?"dead":""}" data-gifttoggle="${x.id}">${x.dead?"Dead":"Alive"}</button>
+          <button class="x" data-giftdel="${x.id}">&times;</button>
+        </div>`;
+      if (x.caught && x.caught !== x.species)
+        h += `<div class="wasline">caught as ${esc(x.caught)}</div>`;
+      if (ui.gevolve === String(x.id) && !x.dead)
+        h += `<div class="evobox row">
+                <input id="gevoin" class="grow" placeholder="Evolved into what?" value="">
+                <button class="log" data-gevocommit="${x.id}">Evolve</button>
+              </div>`;
       if (x.dead)
         h += `<input class="cause" data-giftcause="${x.id}" placeholder="What killed it" value="${esc(x.cause||"")}">`;
       h += `</div>`;
@@ -914,6 +938,7 @@ function render(){
                 <span class="species dead grow">${esc(m.species)}</span>
                 <span class="small muted">${esc(m.route)}</span>
               </div>
+              ${m.from&&m.from!==m.species?`<div class="wasline">caught as ${esc(m.from)}</div>`:""}
               ${m.cause?`<p class="small muted" style="margin-top:3px">${esc(m.cause)}</p>`:""}
             </div>`;
     });
@@ -923,7 +948,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 11</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 12</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -1046,6 +1071,41 @@ function wire(){
     if (at >= 0){ dd.league.splice(at,1); SFX.tap(); } else { dd.league.push(i); SFX.badge(); }
     save(); render();
   });
+
+  all("[data-evolve]", b => b.onclick = () => {
+    const r = b.dataset.evolve;
+    ui.evolve = ui.evolve === r ? null : r; ui.gevolve = null;
+    SFX.tap(); render();
+  });
+  all("[data-evocommit]", b => b.onclick = () => {
+    const r = b.dataset.evocommit, v = (($("#evoin")||{}).value||"").trim();
+    if (!v) return;
+    const e = Object.assign({}, gd().log[r]||{});
+    if (!e.species) return;
+    e.caught = e.caught || e.species;
+    e.species = v;
+    gd().log[r] = e;
+    const ge = (gd().grave||[]).find(z => z.id === e.gid); if (ge) ge.species = v;
+    ui.evolve = null; SFX.catch(); save(); render();
+  });
+  all("[data-gevolve]", b => b.onclick = () => {
+    const id = b.dataset.gevolve;
+    ui.gevolve = ui.gevolve === id ? null : id; ui.evolve = null;
+    SFX.tap(); render();
+  });
+  all("[data-gevocommit]", b => b.onclick = () => {
+    const id = b.dataset.gevocommit, v = (($("#gevoin")||{}).value||"").trim();
+    if (!v) return;
+    const x = (gd().gifts||[]).find(y => String(y.id) === String(id));
+    if (!x) return;
+    x.caught = x.caught || x.species;
+    x.species = v;
+    ui.gevolve = null; SFX.catch(); save(); render();
+  });
+  const evoin = $("#evoin");
+  if (evoin) evoin.onkeydown = ev => { if (ev.key === "Enter"){ const b2=$("[data-evocommit]"); if (b2) b2.click(); } };
+  const gevoin = $("#gevoin");
+  if (gevoin) gevoin.onkeydown = ev => { if (ev.key === "Enter"){ const b2=$("[data-gevocommit]"); if (b2) b2.click(); } };
 
   const ex = $("#export");
   if (ex) ex.onclick = () => {
