@@ -455,7 +455,7 @@ const SFX = {
 
 /* ---------------- state ---------------- */
 const KEY = "nuzlocke-gauntlet";
-const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1, gifts:[] });
+const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1, gifts:[], hof:null });
 
 let S = { active:"firered", games:{} };
 GAMES.forEach(g => S.games[g.id] = freshGame());
@@ -530,6 +530,19 @@ function toggleGift(id){
   }
   save(); render();
 }
+function livingRoster(){
+  const out = [];
+  entries().forEach(e => { if (e.species && !e.dead) out.push({ species:e.species, from:e.route }); });
+  (gd().gifts || []).forEach(x => { if (x.species && !x.dead) out.push({ species:x.species, from:"Gift" }); });
+  return out;
+}
+function enterHof(team){
+  const d = gd();
+  d.hof = { date:new Date().toISOString().slice(0,10), attempt:d.attempt || 1, team:team,
+            deaths:(d.grave || []).filter(x => (x.attempt || 1) === (d.attempt || 1)).length };
+  SFX.badge(); save(); render();
+}
+function clearHof(){ gd().hof = null; save(); render(); }
 function livingLines(){
   const m = new Map();          // evolution-chain key -> the species you hold from it
   entries().forEach(e => {
@@ -560,7 +573,7 @@ function markAlive(r){
 }
 function restartGame(){
   const d = gd();
-  d.log = {}; d.badges = 0; d.top = ""; d.grave = []; d.gifts = []; d.attempt = (d.attempt || 1) + 1;
+  d.log = {}; d.badges = 0; d.top = ""; d.grave = []; d.gifts = []; d.hof = null; d.attempt = (d.attempt || 1) + 1;
   ui.open = null; ui.filter = "todo";
   save(); render();
 }
@@ -608,7 +621,7 @@ function render(){
         </div>
         <div class="screen">`;
   h += '<div class="gametabs">' + GAMES.map(x =>
-    `<button data-game="${x.id}" class="${x.id===S.active?"on":""}">${x.code}</button>`).join("") + "</div>";
+    `<button data-game="${x.id}" class="${x.id===S.active?"on":""}" style="${(S.games[x.id]&&S.games[x.id].hof)?"box-shadow:inset 0 -3px 0 var(--live)":""}">${x.code}</button>`).join("") + "</div>";
 
   h += `<div class="cap ${over?"over":""}">
           <div><div class="tiny muted">Cap · ${esc(capLabel)}</div>
@@ -640,7 +653,7 @@ function render(){
     h += `<div class="alert"><div style="margin-bottom:8px">Everything is dead. The games behind ${esc(g.name)} stay cleared.</div>
           <button id="restart" class="log" style="background:#fff;color:var(--dead);border-color:#fff">Start ${esc(g.name)} again</button></div>`;
 
-  const tabs = [["areas","Areas"],["gifts","Gifts"],["caps","Caps"],["rules","Rules"],["grave","Grave"]];
+  const tabs = [["areas","Areas"],["gifts","Gifts"],["caps","Caps"],["rules","Rules"],["grave","Grave"],["hall","Hall"]];
   h += '<div class="tabs">' + tabs.map(t =>
     `<button data-tab="${t[0]}" class="${ui.tab===t[0]?"on":""}">${t[1]}</button>`).join("") + "</div>";
 
@@ -723,6 +736,58 @@ function render(){
             <input id="newgift" class="grow" placeholder="Gift or static caught">
             <button id="addgift" class="log">Add</button>
           </div>`;
+  }
+
+  if (ui.tab === "hall"){
+    const hof = d.hof;
+    if (hof){
+      h += `<div class="box" style="border-color:var(--live);margin-bottom:14px">
+              <div class="row" style="align-items:baseline">
+                <span class="grow" style="font-size:19px;font-weight:800">Hall of Fame</span>
+                <span class="tiny muted">${esc(hof.date)}</span>
+              </div>
+              <p class="tiny muted" style="margin:2px 0 10px">Attempt ${hof.attempt} &middot; ${hof.deaths} lost along the way</p>`;
+      (hof.team||[]).forEach(t => {
+        h += `<div class="row" style="padding:5px 0">
+                <span class="species grow">${esc(t.species)}</span>
+                <span class="tiny muted">${esc(t.from)}</span>
+              </div>`;
+      });
+      h += `<button class="log" data-hofclear="1" style="margin-top:10px">Clear this record</button></div>`;
+    } else if (d.badges < 8){
+      h += `<p class="small muted" style="padding:12px 0;max-width:62ch">Win all eight badges and beat the League, then come back to log the team that finished ${esc(g.name)}.</p>`;
+    } else {
+      const roster = livingRoster();
+      const auto = roster.length <= 6;
+      ui.hofPick = (ui.hofPick || []).filter(k => roster.some(x => x.species + "|" + x.from === k));
+      h += `<p class="small muted" style="margin:0 0 10px;max-width:62ch">${auto ? "Beat the Champion, then log the survivors." : "More than six alive &mdash; pick the six that fought."}</p>`;
+      if (!roster.length)
+        h += `<p class="small muted" style="padding:8px 0">Nothing is alive to enter the Hall.</p>`;
+      roster.forEach(x => {
+        const key = x.species + "|" + x.from;
+        const on = auto || ui.hofPick.indexOf(key) >= 0;
+        h += `<div class="row" style="padding:5px 0">
+                <button class="log ${on?"on":""}" data-hofpick="${esc(key)}"${auto?" disabled":""}>${on?"In":"Out"}</button>
+                <span class="species grow">${esc(x.species)}</span>
+                <span class="tiny muted">${esc(x.from)}</span>
+              </div>`;
+      });
+      if (roster.length){
+        const n = auto ? roster.length : ui.hofPick.length;
+        h += `<button id="hofenter" class="log" style="margin-top:14px;background:var(--live);color:#fff;border-color:var(--live)"${(!auto && (n<1||n>6))?" disabled":""}>Beat the Champion &middot; log ${n}</button>`;
+      }
+    }
+    h += `<div class="sectionhead row" style="align-items:baseline;margin-top:22px"><span class="grow">The gauntlet</span></div>`;
+    GAMES.forEach((x,i) => {
+      const gx = S.games[x.id] || {};
+      const done = !!gx.hof;
+      const started = !!(Object.keys(gx.log||{}).length || gx.badges || (gx.gifts||[]).length);
+      h += `<div class="row" style="padding:6px 0;opacity:${done?1:(started?0.85:0.45)}">
+              <div class="dot ${done?"on":""}" style="width:14px;height:14px;--dotc:${done?"#1E8E5A":"#B8B5A8"}"></div>
+              <span class="grow small">${i+1}. ${esc(x.name)}</span>
+              <span class="tiny muted">${done ? esc(gx.hof.date) : (started ? "in progress" : "not started")}</span>
+            </div>`;
+    });
   }
 
   if (ui.tab === "caps"){
@@ -869,6 +934,25 @@ function wire(){
   const addG = () => { const v = (ng.value||"").trim(); if (v){ ng.value = ""; addGift(v); } };
   if (ag) ag.onclick = addG;
   if (ng) ng.onkeydown = e => { if (e.key === "Enter") addG(); };
+
+  all("[data-hofpick]", b => b.onclick = () => {
+    const k = b.dataset.hofpick;
+    ui.hofPick = ui.hofPick || [];
+    const i = ui.hofPick.indexOf(k);
+    if (i >= 0) ui.hofPick.splice(i,1); else if (ui.hofPick.length < 6) ui.hofPick.push(k);
+    SFX.tap(); render();
+  });
+  all("[data-hofclear]", b => b.onclick = () => {
+    if (confirm("Clear the Hall of Fame record for " + game().name + "?")) clearHof();
+  });
+  const he = $("#hofenter");
+  if (he) he.onclick = () => {
+    const roster = livingRoster();
+    const team = (roster.length <= 6) ? roster : roster.filter(x => (ui.hofPick||[]).indexOf(x.species + "|" + x.from) >= 0);
+    if (!team.length) return;
+    ui.hofPick = [];
+    enterHof(team);
+  };
 
   const ex = $("#export");
   if (ex) ex.onclick = () => {
