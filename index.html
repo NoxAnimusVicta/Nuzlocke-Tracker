@@ -207,6 +207,17 @@
   .legrow.got .loc{text-decoration:line-through}
   .legline{font-size:11.5px;color:var(--soft);margin-top:3px}
   .legline b{color:var(--ink);font-weight:700}
+
+  .legrow .lst{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+               padding:2px 8px;border-radius:999px;color:#fff;background:var(--soft);white-space:nowrap}
+  .legrow .lst.caught{background:var(--live)}
+  .legrow .lst.dead{background:var(--dead)}
+  .legrow .lst.lost{background:var(--soft)}
+  .legrow .lst.used{background:transparent;color:var(--soft);border:2px solid var(--rule);
+                    text-transform:none;font-weight:600}
+  .legrow.caught .nm{color:var(--live)}
+  .legrow.dead .nm{color:var(--dead);text-decoration:line-through}
+  .legrow.used .nm,.legrow.lost .nm{color:var(--soft)}
 </style>
 </head>
 <body>
@@ -447,6 +458,13 @@ const LEGENDS = {
  unbound:{fixed:{"Route 12":[["Cosmog",""],["Lunala","post"],["Solgaleo","post"]],"Magnolia Fields":[["Enamorus",""],["Landorus",""],["Blacephalon","post"]],"Cinder Volcano":[["Heatran",""],["Groudon","post"],["Moltres","post"],["Volcanion","post"]],"Crystal Peak":[["Hoopa",""],["Rayquaza","post"],["Reshiram","post"],["Zekrom","post"]],"Vivill Warehouse":[["Kyogre",""],["Eternal Floette","post"]],"Victory Road":[["Kyurem",""],["Cobalion","post"],["Terrakion","post"],["Virizion","post"]],"Ruins of Void":[["Suicune",""],["Lugia","post"],["Ho-Oh","post"],["Manaphy","post"]],"Tomb of Borrius":[["Magearna",""]],"Dresco Town":[["Zygarde",""]],"Fallshore City":[["Type: Null",""]],"Frozen Heights":[["Articuno","post"]],"Route 18":[["Azelf","post"],["Registeel","post"]],"Route 4":[["Buzzwole","post"]],"Redwood Village":[["Celebi","post"]],"Crater Town":[["Celesteela","post"],["Jirachi","post"]],"Fullmoon Island":[["Cresselia","post"]],"Newmoon Island":[["Darkrai","post"]],"Route 13":[["Deoxys","post"]],"Cave of Being":[["Dialga","post"]],"KBT Expressway":[["Diancie","post"]],"Distortion World":[["Giratina","post"]],"Antisis City":[["Guzzlord","post"]],"Vivill Woods":[["Kartana","post"]],"Route 17":[["Keldeo","post"],["Tapu Lele","post"]],"Shadow Base":[["Mesprit","post"]],"Mission HQ":[["Mew","post"]],"Frost Mountain":[["Necrozma","post"]],"Route 14":[["Nihilego","post"]],"Rift Cave":[["Palkia","post"]],"Great Desert":[["Pheromosa","post"],["Regirock","post"]],"Frozen Forest":[["Regice","post"]],"Icy Hole":[["Regigigas","post"],["Regidrago","post"],["Regieleki","post"]],"Flower Paradise":[["Shaymin","post"]],"Route 7":[["Stakataka","post"]],"Route 9":[["Tapu Bulu","post"]],"Route 2":[["Tapu Fini","post"]],"Route 11":[["Tapu Koko","post"]],"Seaport Battleground":[["Victini","post"]],"Redwood Forest":[["Xerneas","post"]],"Thundercap Mountain":[["Zapdos","post"],["Xurkitree","post"],["Zeraora","post"]],"Crystal Cave":[["Yveltal","post"]],"Nightmare":[["Arceus","post"]],"Polder Town":[["Meloetta","post"]],"Dream Research Lab":[["Uxie","post"]]},roam:[["Entei",""],["Raikou",""],["Thundurus",""],["Tornadus",""],["Latias","post"],["Latios","post"]]}
 };
 
+GAMES.forEach(g => {
+  const LG = LEGENDS[g.id];
+  if (!LG) return;
+  const have = new Set(g.routes);
+  Object.keys(LG.fixed).forEach(loc => { if (!have.has(loc)){ g.routes.push(loc); have.add(loc); } });
+});
+
 const RULES = [
   ["Starter","Free. Pick it, log it in the Starter slot, and it costs you no encounter. Nothing else counts as an encounter until you have Poké Balls — Route 1 on the way to the shop is a free walk. Once you can throw a ball, every rule applies."],
  ["Encounters","One encounter per area. The first wild Pokémon you meet there, and nothing else. Fail the catch and the area is spent."],
@@ -610,7 +628,49 @@ function save(){
 const game = () => GAMES.find(g => g.id === S.active);
 const gd   = () => S.games[S.active];
 const routesOf = () => game().routes.concat(gd().extra);
-const pool = r => (ENCOUNTERS[S.active] || {})[r] || [];
+const pool = r => {
+  const base = (ENCOUNTERS[S.active] || {})[r] || [];
+  const LG = LEGENDS[S.active];
+  const leg = (LG && LG.fixed[r]) ? LG.fixed[r].map(p => p[0]) : [];
+  return leg.length ? leg.concat(base.filter(x => leg.indexOf(x) < 0)) : base;
+};
+
+// an area whose legendaries are all post-game or event stays shut until the League falls
+function legLocked(r){
+  const LG = LEGENDS[S.active];
+  const at = LG && LG.fixed[r];
+  if (!at || !at.length) return false;
+  return at.every(p => p[1] === "post" || p[1] === "event");
+}
+
+// the Legends list is a read-out of the area log, never edited directly
+function legendRows(){
+  const LG = LEGENDS[S.active] || { fixed:{}, roam:[] };
+  const lg = gd().log || {}, gifts = gd().gifts || [];
+  const anywhere = name => {
+    const n = name.toLowerCase();
+    for (const k in lg) if (lg[k].species && lg[k].species.toLowerCase() === n) return k;
+    for (const x of gifts) if (x.species && x.species.toLowerCase() === n) return "Gift";
+    return null;
+  };
+  const rows = [];
+  Object.keys(LG.fixed).forEach(loc => LG.fixed[loc].forEach(p => {
+    const e = lg[loc] || {};
+    let st = "open", note = "";
+    if (e.species && e.species.toLowerCase() === p[0].toLowerCase()) st = e.dead ? "dead" : "caught";
+    else if (e.lost) st = "lost";
+    else if (e.species){ st = "used"; note = e.species; }
+    else { const w = anywhere(p[0]); if (w){ st = "caught"; note = w; } }
+    rows.push({ name:p[0], tag:p[1], loc:loc, st:st, note:note });
+  }));
+  (LG.roam || []).forEach(p => {
+    const w = anywhere(p[0]);
+    rows.push({ name:p[0], tag:p[1], loc:"Roaming", st:w?"caught":"open", note:w||"" });
+  });
+  const rank = t => t === "" ? 0 : (t === "post" ? 1 : 2);
+  rows.sort((a,b) => rank(a.tag) - rank(b.tag) || a.name.localeCompare(b.name));
+  return rows;
+}
 
 function entries(){
   return routesOf().map(r => Object.assign({ route:r }, gd().log[r] || {}));
@@ -720,9 +780,11 @@ function render(){
   const LG = LEGENDS[S.active] || { fixed:{}, roam:[] };
   const LEGHERE = {};
   Object.keys(LG.fixed).forEach(loc => { LEGHERE[loc] = LG.fixed[loc].map(p => p[0]).join(", "); });
-  const legGot = (d.legends || []);
-  let legTotal = (LG.roam || []).length;
-  Object.keys(LG.fixed).forEach(loc => { legTotal += LG.fixed[loc].length; });
+  const legList = legendRows();
+  const legCaught = legList.filter(x => x.st === "caught" || x.st === "dead").length;
+  const legTotal = legList.length;
+  const leagueDone = g.league.members.length > 0 && (d.league || []).length >= g.league.members.length;
+  const locked = new Set(rs.filter(r => !leagueDone && legLocked(r)));
 
   let h = "";
 
@@ -774,33 +836,28 @@ function render(){
     `<button data-tab="${t[0]}" class="${ui.tab===t[0]?"on":""}">${t[1]}</button>`).join("") + "</div>";
 
   if (ui.tab === "areas"){
-    const fl = [["todo","Remaining ("+(es.length-used)+")"],["done","Logged ("+used+")"],["all","All"],["legend","Legends ("+legGot.length+"/"+legTotal+")"]];
+    const openCount = es.filter(e => !e.species && !e.lost && !locked.has(e.route)).length;
+    const fl = [["todo","Remaining ("+openCount+")"],["done","Logged ("+used+")"],["all","All"],["legend","Legends ("+legCaught+"/"+legTotal+")"]];
     h += '<div class="chips">' + fl.map(f =>
       `<button data-filter="${f[0]}" class="${ui.filter===f[0]?"on":""}">${f[1]}</button>`).join("") + "</div>";
 
     let list = es;
-    if (ui.filter === "todo") list = es.filter(e => !e.species && !e.lost);
+    if (ui.filter === "todo") list = es.filter(e => !e.species && !e.lost && !locked.has(e.route));
     if (ui.filter === "done") list = es.filter(e => e.species || e.lost);
     if (ui.filter === "legend") list = [];
 
     if (ui.filter === "legend"){
-      const rows = [];
-      Object.keys(LG.fixed).forEach(loc => LG.fixed[loc].forEach(p =>
-        rows.push({ name:p[0], tag:p[1], loc:loc })));
-      (LG.roam || []).forEach(p => rows.push({ name:p[0], tag:p[1], loc:"Roaming", roam:true }));
-      const rank = t => t === "" ? 0 : (t === "post" ? 1 : 2);
-      rows.sort((a,b) => rank(a.tag) - rank(b.tag) || a.name.localeCompare(b.name));
-      h += `<p class="small muted" style="margin:0 0 10px;max-width:62ch">Tap one you have caught. Roamers give you a single meeting &mdash; if it flees, that area is spent.</p>`;
-      if (!rows.length)
-        h += `<p class="small muted" style="padding:8px 0">No legendaries listed for ${esc(g.name)} yet.</p>`;
-      rows.forEach(r0 => {
-        const key = r0.name + "|" + r0.loc;
-        const on = legGot.indexOf(key) >= 0;
-        h += `<button class="legrow${on?" got":""}" data-legend="${esc(key)}">
+      h += `<p class="small muted" style="margin:0 0 10px;max-width:62ch">This mirrors your area log &mdash; catch one in its own area and it ticks over here. Roamers give you a single meeting: if it flees, that area is spent.</p>`;
+      legList.forEach(r0 => {
+        h += `<div class="legrow ${r0.st}">
                 <span class="nm">${esc(r0.name)}</span>
                 <span class="loc">${esc(r0.loc)}</span>
                 ${r0.tag?`<span class="ltag">${r0.tag}</span>`:""}
-              </button>`;
+                ${r0.st==="caught"?`<span class="lst caught">caught</span>`:""}
+                ${r0.st==="dead"?`<span class="lst dead">dead</span>`:""}
+                ${r0.st==="lost"?`<span class="lst lost">lost</span>`:""}
+                ${r0.st==="used"?`<span class="lst used">${esc(r0.note)}</span>`:""}
+              </div>`;
       });
     }
 
@@ -813,7 +870,9 @@ function render(){
       h += `<span class="grow small" style="color:${e.species||e.lost?"var(--soft)":"var(--ink)"}">${esc(e.route)}</span>`;
 
       if (!e.species && !e.lost)
-        h += `<button class="log ${isOpen?"on":""}" data-open="${esc(e.route)}">${isOpen?"Close":"Log"}</button>`;
+        h += locked.has(e.route)
+          ? `<span class="ltag">post-game</span>`
+          : `<button class="log ${isOpen?"on":""}" data-open="${esc(e.route)}">${isOpen?"Close":"Log"}</button>`;
       if (e.lost)
         h += `<button class="small muted" style="font-style:italic" data-clear="${esc(e.route)}">lost</button>`;
       if (e.species){
@@ -952,7 +1011,7 @@ function render(){
       h += `</div>`;
     }
     {
-      const lg = (d.legends || []).length;
+      const lg = legCaught;
       h += `<div class="box" style="margin-bottom:12px">
               <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">Legendary hunt</div>
               <p class="small" style="margin:6px 0 0"><b style="font-size:20px">${lg}</b> caught in ${esc(g.name)}</p>`;
@@ -1034,7 +1093,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 14</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 15</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -1212,18 +1271,11 @@ function wire(){
     if (ev.key === "Enter"){ ui.cause = null; ui.gcause = null; render(); }
   };
 
-  all("[data-legend]", b => b.onclick = () => {
-    const k = b.dataset.legend, dd = gd();
-    dd.legends = dd.legends || [];
-    const i = dd.legends.indexOf(k);
-    if (i >= 0){ dd.legends.splice(i,1); SFX.tap(); } else { dd.legends.push(k); SFX.badge(); }
-    save(); render();
-  });
   all("[data-finish]", b => b.onclick = () => {
     const dd = gd();
     if (!dd.hof) return;
     dd.hof.finished = new Date().toISOString().slice(0,10);
-    dd.hof.legends = (dd.legends || []).length;
+    dd.hof.legends = legendRows().filter(x => x.st === "caught" || x.st === "dead").length;
     SFX.badge(); save(); render();
   });
 
