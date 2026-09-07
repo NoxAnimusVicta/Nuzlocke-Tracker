@@ -195,6 +195,18 @@
 
   .causeline{display:block;width:100%;text-align:left;text-decoration:underline dotted;
              text-decoration-color:var(--rule);text-underline-offset:3px}
+
+  .legrow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+          padding:9px 0;border-bottom:2px dashed var(--rule)}
+  .legrow:last-of-type{border-bottom:0}
+  .legrow .nm{font-size:14px;font-weight:700;min-width:92px}
+  .legrow .loc{flex:1;font-size:12px;color:var(--soft)}
+  .legrow .ltag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+                padding:2px 7px;border-radius:999px;border:2px solid var(--rule);color:var(--soft)}
+  .legrow.got .nm{color:var(--live)}
+  .legrow.got .loc{text-decoration:line-through}
+  .legline{font-size:11.5px;color:var(--soft);margin-top:3px}
+  .legline b{color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
@@ -425,6 +437,16 @@ const GAMES = [
    routes:["Starter","Route 1","Bellin Town","Icicle Cave","Route 2","Dresco Town","Route 3","Flower Paradise","Route 4","Grim Woods","Cinder Volcano","Route 5","Crater Town","KBT Expressway","Valley Cave","Route 6","Route 7","Frost Mountain","Route 8","Blizzard City","Frozen Forest","Fallshore City","Route 11","Epidimy Town","Route 10","Auburn Waterway","Route 9","Tehl Town","Tarmigan Town","Thundercap Mt.","Route 12","Dehara City","Ruins of Void","Route 15","Route 13","Route 14","Lost Tunnel","Great Desert","Gurun Town","Vivill Woods","Vivill Town","Vivill Warehouse","Route 16","Antisis City","Antisis Sewers","Icy Hole","Seaport City","Polder Town","Safari Zone","Cootes Bog","Magnolia Town","Crystal Peak","Magnolia Fields","Redwood Village","Route 18","Victory Road","Tomb of Borrius","Rift Cave","Redwood Forest","Cliff Cave","Cube Corp."] }
 ];
 
+const LEGENDS = {
+ firered:{fixed:{"Seafoam Islands":[["Articuno",""]],"Power Plant":[["Zapdos",""]],"Mt. Ember":[["Moltres",""]],"Cerulean Cave":[["Mewtwo","post"]],"Navel Rock":[["Lugia","event"],["Ho-Oh","event"]],"Birth Island":[["Deoxys","event"]]},roam:[["Raikou","post"],["Entei","post"],["Suicune","post"]]},
+ soulsilver:{fixed:{"Whirl Islands":[["Lugia",""]],"Bell Tower":[["Suicune",""],["Ho-Oh","post"]],"Seafoam Islands":[["Articuno","post"]],"Power Plant":[["Zapdos","post"]],"Mt. Silver":[["Moltres","post"]],"Cerulean Cave":[["Mewtwo","post"]],"Embedded Tower":[["Groudon","event"]],"Ilex Forest":[["Celebi","event"]],"Sinjoh Ruins":[["Dialga","event"],["Palkia","event"],["Giratina","event"]]},roam:[["Raikou",""],["Entei",""],["Latios","post"]]},
+ emerald:{fixed:{"Sky Pillar":[["Rayquaza",""]],"Desert Ruins":[["Regirock",""]],"Island Cave":[["Regice",""]],"Ancient Tomb":[["Registeel",""]],"Marine Cave":[["Kyogre","post"]],"Terra Cave":[["Groudon","post"]],"Southern Island":[["Latias","event"],["Latios","event"]],"Navel Rock":[["Lugia","event"],["Ho-Oh","event"]],"Birth Island":[["Deoxys","event"]],"Faraway Island":[["Mew","event"]]},roam:[["Latias","post"],["Latios","post"]]},
+ platinum:{fixed:{"Acuity Cavern":[["Uxie",""]],"Valor Cavern":[["Azelf",""]],"Distortion World":[["Giratina",""]],"Turnback Cave":[["Giratina","post"]],"Spear Pillar":[["Dialga","post"],["Palkia","post"]],"Stark Mountain":[["Heatran","post"]],"Snowpoint Temple":[["Regigigas","post"]],"Fullmoon Island":[["Cresselia","post"]],"Newmoon Island":[["Darkrai","event"]],"Flower Paradise":[["Shaymin","event"]],"Hall of Origin":[["Arceus","event"]]},roam:[["Mesprit",""],["Cresselia","post"]]},
+ black:{fixed:{"N's Castle":[["Reshiram",""]],"Mistralton Cave":[["Cobalion",""]],"Victory Road":[["Terrakion",""]],"Pinwheel Forest":[["Virizion",""]],"Giant Chasm":[["Kyurem","post"]],"Abundant Shrine":[["Landorus","post"]],"Liberty Garden":[["Victini","event"]]},roam:[["Tornadus",""]]},
+ white2:{fixed:{"Dragonspiral Tower":[["Zekrom","post"]],"Giant Chasm":[["Kyurem","post"]],"Guidance Chamber":[["Cobalion","post"]],"Trial Chamber":[["Virizion","post"]],"Rumination Field":[["Terrakion","post"]],"Dreamyard":[["Latias","post"]],"Abundant Shrine":[["Landorus","event"]]},roam:[]},
+ unbound:{fixed:{"Route 12":[["Cosmog",""],["Lunala","post"],["Solgaleo","post"]],"Magnolia Fields":[["Enamorus",""],["Landorus",""],["Blacephalon","post"]],"Cinder Volcano":[["Heatran",""],["Groudon","post"],["Moltres","post"],["Volcanion","post"]],"Crystal Peak":[["Hoopa",""],["Rayquaza","post"],["Reshiram","post"],["Zekrom","post"]],"Vivill Warehouse":[["Kyogre",""],["Eternal Floette","post"]],"Victory Road":[["Kyurem",""],["Cobalion","post"],["Terrakion","post"],["Virizion","post"]],"Ruins of Void":[["Suicune",""],["Lugia","post"],["Ho-Oh","post"],["Manaphy","post"]],"Tomb of Borrius":[["Magearna",""]],"Dresco Town":[["Zygarde",""]],"Fallshore City":[["Type: Null",""]],"Frozen Heights":[["Articuno","post"]],"Route 18":[["Azelf","post"],["Registeel","post"]],"Route 4":[["Buzzwole","post"]],"Redwood Village":[["Celebi","post"]],"Crater Town":[["Celesteela","post"],["Jirachi","post"]],"Fullmoon Island":[["Cresselia","post"]],"Newmoon Island":[["Darkrai","post"]],"Route 13":[["Deoxys","post"]],"Cave of Being":[["Dialga","post"]],"KBT Expressway":[["Diancie","post"]],"Distortion World":[["Giratina","post"]],"Antisis City":[["Guzzlord","post"]],"Vivill Woods":[["Kartana","post"]],"Route 17":[["Keldeo","post"],["Tapu Lele","post"]],"Shadow Base":[["Mesprit","post"]],"Mission HQ":[["Mew","post"]],"Frost Mountain":[["Necrozma","post"]],"Route 14":[["Nihilego","post"]],"Rift Cave":[["Palkia","post"]],"Great Desert":[["Pheromosa","post"],["Regirock","post"]],"Frozen Forest":[["Regice","post"]],"Icy Hole":[["Regigigas","post"],["Regidrago","post"],["Regieleki","post"]],"Flower Paradise":[["Shaymin","post"]],"Route 7":[["Stakataka","post"]],"Route 9":[["Tapu Bulu","post"]],"Route 2":[["Tapu Fini","post"]],"Route 11":[["Tapu Koko","post"]],"Seaport Battleground":[["Victini","post"]],"Redwood Forest":[["Xerneas","post"]],"Thundercap Mountain":[["Zapdos","post"],["Xurkitree","post"],["Zeraora","post"]],"Crystal Cave":[["Yveltal","post"]],"Nightmare":[["Arceus","post"]],"Polder Town":[["Meloetta","post"]],"Dream Research Lab":[["Uxie","post"]]},roam:[["Entei",""],["Raikou",""],["Thundurus",""],["Tornadus",""],["Latias","post"],["Latios","post"]]}
+};
+
 const RULES = [
   ["Starter","Free. Pick it, log it in the Starter slot, and it costs you no encounter. Nothing else counts as an encounter until you have Poké Balls — Route 1 on the way to the shop is a free walk. Once you can throw a ball, every rule applies."],
  ["Encounters","One encounter per area. The first wild Pokémon you meet there, and nothing else. Fail the catch and the area is spent."],
@@ -440,7 +462,7 @@ const RULES = [
  ["Battle style","Set mode. No free switch when the opponent sends something out, so every lead is a commitment."],
  ["Items","Two healing items per battle, no exceptions — Gym Leaders, the Elite Four and Rivals included. Anything that restores HP or clears a status counts: Potions, Antidotes, Burn Heals, Awakenings, Full Heals. Revives are banned outright, in battle and out of it — a faint is a death. Otherwise there is no limit outside battle. Heal as much as you like between fights, including between Elite Four members."],
  ["Gifts","Gift and static Pokémon are free and cost no area encounter. The dupes clause still applies, they die like anything else, and they belong in the Gifts list so the graveyard stays complete."],
-  ["Legendaries","Repelling your way to a Legendary is legal — it breaks none of the core rules. But you get one attempt at it. Catch it first try and it is yours to use. Run out of balls, or fail to catch it, and you must knock it out. There are no save reloads. Anything it kills stays dead, and if it takes your whole party that is a wipe like any other."],
+  ["Legendaries","Repelling your way to a Legendary is legal — it breaks none of the core rules. But you get one attempt at it. Catch it first try and it is yours to use. Run out of balls, or fail to catch it, and you must knock it out. There are no save reloads. Anything it kills stays dead, and if it takes your whole party that is a wipe like any other. Roamers work the same way but you only ever get the one meeting: if it flees, that area is spent, exactly like an Abra teleporting away."],
  ["Gauntlet","Beat each game before starting the next. Fire Red, Soul Silver, Emerald, Platinum, Black, White 2, Unbound."]
 ];
 
@@ -543,7 +565,7 @@ const SFX = {
 
 /* ---------------- state ---------------- */
 const KEY = "nuzlocke-gauntlet";
-const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1, gifts:[], hof:null, league:[] });
+const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1, gifts:[], hof:null, league:[], legends:[] });
 
 let S = { active:"firered", games:{} };
 GAMES.forEach(g => S.games[g.id] = freshGame());
@@ -661,7 +683,7 @@ function markAlive(r){
 }
 function restartGame(){
   const d = gd();
-  d.log = {}; d.badges = 0; d.top = ""; d.grave = []; d.gifts = []; d.hof = null; d.league = []; d.attempt = (d.attempt || 1) + 1;
+  d.log = {}; d.badges = 0; d.top = ""; d.grave = []; d.gifts = []; d.hof = null; d.league = []; d.legends = []; d.attempt = (d.attempt || 1) + 1;
   ui.open = null; ui.filter = "todo";
   save(); render();
 }
@@ -695,6 +717,12 @@ function render(){
   const capLabel = atLeague ? "Pokémon League" : (d.badges + 1) + ". " + g.gyms[d.badges][0];
   const over = parseInt(d.top, 10) > cap;
   const grave = graveyard();
+  const LG = LEGENDS[S.active] || { fixed:{}, roam:[] };
+  const LEGHERE = {};
+  Object.keys(LG.fixed).forEach(loc => { LEGHERE[loc] = LG.fixed[loc].map(p => p[0]).join(", "); });
+  const legGot = (d.legends || []);
+  let legTotal = (LG.roam || []).length;
+  Object.keys(LG.fixed).forEach(loc => { legTotal += LG.fixed[loc].length; });
 
   let h = "";
 
@@ -746,15 +774,37 @@ function render(){
     `<button data-tab="${t[0]}" class="${ui.tab===t[0]?"on":""}">${t[1]}</button>`).join("") + "</div>";
 
   if (ui.tab === "areas"){
-    const fl = [["todo","Remaining ("+(es.length-used)+")"],["done","Logged ("+used+")"],["all","All"]];
+    const fl = [["todo","Remaining ("+(es.length-used)+")"],["done","Logged ("+used+")"],["all","All"],["legend","Legends ("+legGot.length+"/"+legTotal+")"]];
     h += '<div class="chips">' + fl.map(f =>
       `<button data-filter="${f[0]}" class="${ui.filter===f[0]?"on":""}">${f[1]}</button>`).join("") + "</div>";
 
     let list = es;
     if (ui.filter === "todo") list = es.filter(e => !e.species && !e.lost);
     if (ui.filter === "done") list = es.filter(e => e.species || e.lost);
+    if (ui.filter === "legend") list = [];
 
-    if (!list.length)
+    if (ui.filter === "legend"){
+      const rows = [];
+      Object.keys(LG.fixed).forEach(loc => LG.fixed[loc].forEach(p =>
+        rows.push({ name:p[0], tag:p[1], loc:loc })));
+      (LG.roam || []).forEach(p => rows.push({ name:p[0], tag:p[1], loc:"Roaming", roam:true }));
+      const rank = t => t === "" ? 0 : (t === "post" ? 1 : 2);
+      rows.sort((a,b) => rank(a.tag) - rank(b.tag) || a.name.localeCompare(b.name));
+      h += `<p class="small muted" style="margin:0 0 10px;max-width:62ch">Tap one you have caught. Roamers give you a single meeting &mdash; if it flees, that area is spent.</p>`;
+      if (!rows.length)
+        h += `<p class="small muted" style="padding:8px 0">No legendaries listed for ${esc(g.name)} yet.</p>`;
+      rows.forEach(r0 => {
+        const key = r0.name + "|" + r0.loc;
+        const on = legGot.indexOf(key) >= 0;
+        h += `<button class="legrow${on?" got":""}" data-legend="${esc(key)}">
+                <span class="nm">${esc(r0.name)}</span>
+                <span class="loc">${esc(r0.loc)}</span>
+                ${r0.tag?`<span class="ltag">${r0.tag}</span>`:""}
+              </button>`;
+      });
+    }
+
+    if (!list.length && ui.filter !== "legend")
       h += `<p class="small muted" style="padding:16px 0">${ui.filter==="todo"?"Every area is logged.":"Nothing here yet."}</p>`;
 
     list.forEach(e => {
@@ -775,6 +825,8 @@ function render(){
       }
       h += "</div>";
 
+      if (LEGHERE[e.route])
+        h += `<div class="legline">&#9733; <b>${esc(LEGHERE[e.route])}</b> can be found here</div>`;
       if (e.caught && e.caught !== e.species)
         h += `<div class="wasline">caught as ${esc(e.caught)}</div>`;
       if (ui.evolve === e.route && e.species && !e.dead)
@@ -817,10 +869,11 @@ function render(){
       h += "</div>";
     });
 
-    h += `<div class="row" style="margin-top:16px">
-            <input id="newarea" class="grow" placeholder="Add a missing area">
-            <button id="addarea" class="log">Add</button>
-          </div>`;
+    if (ui.filter !== "legend")
+      h += `<div class="row" style="margin-top:16px">
+              <input id="newarea" class="grow" placeholder="Add a missing area">
+              <button id="addarea" class="log">Add</button>
+            </div>`;
   }
 
   if (ui.tab === "gifts"){
@@ -898,6 +951,20 @@ function render(){
       }
       h += `</div>`;
     }
+    {
+      const lg = (d.legends || []).length;
+      h += `<div class="box" style="margin-bottom:12px">
+              <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">Legendary hunt</div>
+              <p class="small" style="margin:6px 0 0"><b style="font-size:20px">${lg}</b> caught in ${esc(g.name)}</p>`;
+      if (d.hof && d.hof.finished)
+        h += `<p class="tiny muted" style="margin:6px 0 0">Run closed ${esc(d.hof.finished)} with ${d.hof.legends||0} legendaries.</p>`;
+      else if (d.hof)
+        h += `<p class="tiny muted" style="margin:6px 0 8px">The League is done. Hunt for as long as you like, then call it.</p>
+              <button class="log" data-finish="1">Call the run finished</button>`;
+      else
+        h += `<p class="tiny muted" style="margin:6px 0 0">The hunt opens once you have logged the Hall of Fame.</p>`;
+      h += `</div>`;
+    }
     h += `<div class="gaunt"><div class="lbl">The gauntlet</div>`;
     GAMES.forEach((x,i) => {
       const gx = S.games[x.id] || {};
@@ -967,7 +1034,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 13</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 14</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -1144,6 +1211,21 @@ function wire(){
   if (cin) cin.onkeydown = ev => {
     if (ev.key === "Enter"){ ui.cause = null; ui.gcause = null; render(); }
   };
+
+  all("[data-legend]", b => b.onclick = () => {
+    const k = b.dataset.legend, dd = gd();
+    dd.legends = dd.legends || [];
+    const i = dd.legends.indexOf(k);
+    if (i >= 0){ dd.legends.splice(i,1); SFX.tap(); } else { dd.legends.push(k); SFX.badge(); }
+    save(); render();
+  });
+  all("[data-finish]", b => b.onclick = () => {
+    const dd = gd();
+    if (!dd.hof) return;
+    dd.hof.finished = new Date().toISOString().slice(0,10);
+    dd.hof.legends = (dd.legends || []).length;
+    SFX.badge(); save(); render();
+  });
 
   const ex = $("#export");
   if (ex) ex.onclick = () => {
