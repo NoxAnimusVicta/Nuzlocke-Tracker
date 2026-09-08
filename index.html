@@ -218,6 +218,12 @@
   .legrow.caught .nm{color:var(--live)}
   .legrow.dead .nm{color:var(--dead);text-decoration:line-through}
   .legrow.used .nm,.legrow.lost .nm{color:var(--soft)}
+
+  .area .row,.legrow,.lmember,.gaunt .g{min-width:0}
+  .species,.wasline,.causeline,.legrow .nm,.legrow .loc,.lmember .nm,
+  .gaunt .g .nm,.hof li .species{min-width:0;overflow-wrap:anywhere}
+  .species{flex:0 1 auto}
+  .grow,.small,.tiny{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -644,6 +650,19 @@ function legLocked(r){
 }
 
 // the Legends list is a read-out of the area log, never edited directly
+let _spCache = {};
+function speciesList(){
+  if (_spCache[S.active]) return _spCache[S.active];
+  const set = new Set();
+  const enc = ENCOUNTERS[S.active] || {};
+  Object.keys(enc).forEach(k => (enc[k] || []).forEach(x => set.add(x)));
+  const LG = LEGENDS[S.active];
+  if (LG){
+    Object.keys(LG.fixed).forEach(loc => LG.fixed[loc].forEach(p => set.add(p[0])));
+    (LG.roam || []).forEach(p => set.add(p[0]));
+  }
+  return (_spCache[S.active] = [...set].sort());
+}
 function legendRows(){
   const LG = LEGENDS[S.active] || { fixed:{}, roam:[] };
   const lg = gd().log || {}, gifts = gd().gifts || [];
@@ -841,14 +860,22 @@ function render(){
     h += '<div class="chips">' + fl.map(f =>
       `<button data-filter="${f[0]}" class="${ui.filter===f[0]?"on":""}">${f[1]}</button>`).join("") + "</div>";
 
+    h += `<div class="row" style="margin-bottom:10px">
+            <input id="areaq" class="grow" placeholder="${ui.filter==="legend"?"Find a legendary":"Find an area"}" value="${esc(ui.q||"")}" autocomplete="off">
+            ${ui.q?`<button class="log" data-qclear="1">Clear</button>`:""}
+          </div>`;
+
+    const qq = (ui.q || "").trim().toLowerCase();
     let list = es;
     if (ui.filter === "todo") list = es.filter(e => !e.species && !e.lost && !locked.has(e.route));
     if (ui.filter === "done") list = es.filter(e => e.species || e.lost);
     if (ui.filter === "legend") list = [];
+    if (qq) list = list.filter(e => e.route.toLowerCase().indexOf(qq) >= 0);
 
     if (ui.filter === "legend"){
       h += `<p class="small muted" style="margin:0 0 10px;max-width:62ch">This mirrors your area log &mdash; catch one in its own area and it ticks over here. Roamers give you a single meeting: if it flees, that area is spent.</p>`;
-      legList.forEach(r0 => {
+      const legShown = qq ? legList.filter(r0 => (r0.name + " " + r0.loc).toLowerCase().indexOf(qq) >= 0) : legList;
+      legShown.forEach(r0 => {
         h += `<div class="legrow ${r0.st}">
                 <span class="nm">${esc(r0.name)}</span>
                 <span class="loc">${esc(r0.loc)}</span>
@@ -890,7 +917,7 @@ function render(){
         h += `<div class="wasline">caught as ${esc(e.caught)}</div>`;
       if (ui.evolve === e.route && e.species && !e.dead)
         h += `<div class="evobox row">
-                <input id="evoin" class="grow" placeholder="Evolved into what?" value="">
+                <input id="evoin" class="grow" list="splist" autocomplete="off" placeholder="Evolved into what?" value="">
                 <button class="log" data-evocommit="${esc(e.route)}">Evolve</button>
               </div>`;
 
@@ -905,7 +932,7 @@ function render(){
         } else {
           h += `<p class="tiny muted" style="margin:0 0 10px">No table for this area yet — type what you caught.</p>`;
         }
-        h += `<input id="draft" placeholder="${p.length?"Or type something else":"Species caught"}" value="${esc(ui.draft)}">
+        h += `<input id="draft" list="splist" autocomplete="off" placeholder="${p.length?"Or type something else":"Species caught"}" value="${esc(ui.draft)}">
               <div class="pact">
                 <button class="primary" data-commit="${esc(e.route)}">Caught</button>
                 <button class="ghost" data-lost="${esc(e.route)}">Lost it</button>
@@ -952,7 +979,7 @@ function render(){
         h += `<div class="wasline">caught as ${esc(x.caught)}</div>`;
       if (ui.gevolve === String(x.id) && !x.dead)
         h += `<div class="evobox row">
-                <input id="gevoin" class="grow" placeholder="Evolved into what?" value="">
+                <input id="gevoin" class="grow" list="splist" autocomplete="off" placeholder="Evolved into what?" value="">
                 <button class="log" data-gevocommit="${x.id}">Evolve</button>
               </div>`;
       if (x.dead){
@@ -968,7 +995,7 @@ function render(){
       h += `</div>`;
     });
     h += `<div class="row" style="margin-top:16px">
-            <input id="newgift" class="grow" placeholder="Gift or static caught">
+            <input id="newgift" class="grow" list="splist" autocomplete="off" placeholder="Gift or static caught">
             <button id="addgift" class="log">Add</button>
           </div>`;
   }
@@ -1093,11 +1120,15 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 15</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 16</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
 
+  h += `<datalist id="splist">${speciesList().map(x => `<option value="${esc(x)}"></option>`).join("")}</datalist>`;
+
+  const _q = document.getElementById("areaq");
+  ui.qFocus = !!(_q && document.activeElement === _q);
   document.getElementById("app").innerHTML = h;
   wire();
 }
@@ -1278,6 +1309,13 @@ function wire(){
     dd.hof.legends = legendRows().filter(x => x.st === "caught" || x.st === "dead").length;
     SFX.badge(); save(); render();
   });
+
+  const aq = $("#areaq");
+  if (aq){
+    aq.oninput = () => { ui.q = aq.value; render(); };
+    if (ui.qFocus){ aq.focus(); const n = aq.value.length; try { aq.setSelectionRange(n, n); } catch(e){} }
+  }
+  all("[data-qclear]", b => b.onclick = () => { ui.q = ""; SFX.tap(); render(); });
 
   const ex = $("#export");
   if (ex) ex.onclick = () => {
