@@ -224,6 +224,16 @@
   .gaunt .g .nm,.hof li .species{min-width:0;overflow-wrap:anywhere}
   .species{flex:0 1 auto}
   .grow,.small,.tiny{overflow-wrap:anywhere}
+
+  .pickrow{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+           padding:11px 0;border-bottom:2px dashed var(--rule)}
+  .pickrow:last-of-type{border-bottom:0}
+  .pickrow .num{width:26px;height:26px;flex:0 0 auto;border-radius:50%;border:2px solid var(--rule);
+                color:var(--soft);display:inline-flex;align-items:center;justify-content:center;
+                font-size:12px;font-weight:700}
+  .pickrow.on .num{background:var(--live);border-color:var(--live);color:#fff}
+  .pickrow .nm{flex:1;font-size:15px;font-weight:700;overflow-wrap:anywhere}
+  .pickrow .rg{font-size:12px;color:var(--soft);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -485,9 +495,10 @@ const RULES = [
  ["League cap","The Elite Four and the Champion share one cap, taken from the last Elite Four member. There is no box access once you walk in, so levels gained inside the League do not count against it."],
  ["Battle style","Set mode. No free switch when the opponent sends something out, so every lead is a commitment."],
  ["Items","Two healing items per battle, no exceptions — Gym Leaders, the Elite Four and Rivals included. Anything that restores HP or clears a status counts: Potions, Antidotes, Burn Heals, Awakenings, Full Heals. Revives are banned outright, in battle and out of it — a faint is a death. Otherwise there is no limit outside battle. Heal as much as you like between fights, including between Elite Four members."],
- ["Gifts","Gift and static Pokémon are free and cost no area encounter. The dupes clause still applies, they die like anything else, and they belong in the Gifts list so the graveyard stays complete."],
+ ["Gifts","Only gifts, fossils and eggs come free. Statics count as that area's encounter, legendaries included, so walking into the Snorlax on Route 12 spends Route 12. The free ones still obey the dupes clause, still die permanently, and belong in the Gifts list so the graveyard stays complete."],
+ ["Breeding","Locked until the Elite Four is down. Infinite eggs are a safety net, and you should only have one once the run is effectively over and you are deciding whether to move on."],
   ["Legendaries","Repelling your way to a Legendary is legal — it breaks none of the core rules. But you get one attempt at it. Catch it first try and it is yours to use. Run out of balls, or fail to catch it, and you must knock it out. There are no save reloads. Anything it kills stays dead, and if it takes your whole party that is a wipe like any other. Roamers work the same way but you only ever get the one meeting: if it flees, that area is spent, exactly like an Abra teleporting away."],
- ["Gauntlet","Beat each game before starting the next. Fire Red, Soul Silver, Emerald, Platinum, Black, White 2, Unbound."]
+ ["Gauntlet","Beat each game before starting the next, in the order you picked in your loadout."]
 ];
 
 
@@ -591,7 +602,7 @@ const SFX = {
 const KEY = "nuzlocke-gauntlet";
 const freshGame = () => ({ log:{}, extra:[], badges:0, top:"", grave:[], attempt:1, gifts:[], hof:null, league:[], legends:[] });
 
-let S = { active:"firered", games:{} };
+let S = { active:"firered", games:{}, loadout:null };
 GAMES.forEach(g => S.games[g.id] = freshGame());
 
 let ui = { tab:"areas", filter:"todo", open:null, draft:"" };
@@ -631,6 +642,8 @@ function save(){
 }
 
 /* ---------------- helpers ---------------- */
+const loadout = () => (Array.isArray(S.loadout) && S.loadout.length) ? S.loadout : GAMES.map(g => g.id);
+const loadoutGames = () => loadout().map(id => GAMES.find(g => g.id === id)).filter(Boolean);
 const game = () => GAMES.find(g => g.id === S.active);
 const gd   = () => S.games[S.active];
 const routesOf = () => game().routes.concat(gd().extra);
@@ -783,7 +796,42 @@ function pick(r, species){
 }
 
 /* ---------------- render ---------------- */
+function renderSetup(){
+  const picked = ui.pick || [];
+  const wipe = !!ui.wipeOnStart;
+  let h = `<div class="devtop">
+            <div class="lens"></div>
+            <div class="lights"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+            <div class="devtitle"><div class="title">Loadout</div>
+              <div class="sub">${picked.length} game${picked.length===1?"":"s"} picked</div></div>
+          </div><div class="screen">`;
+  if (wipe)
+    h += `<div class="alert">Starting a new gauntlet deletes every run, graveyard and Hall of Fame you have. Nothing is gone until you press the button at the bottom.</div>`;
+  h += `<div class="box" style="margin-bottom:12px">
+          <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">Pick your games</div>
+          <p class="small muted" style="margin:6px 0 0">Tap them in the order you will play them. You beat each one before starting the next. Tap again to remove.</p>
+        </div>`;
+  GAMES.forEach(g => {
+    const i = picked.indexOf(g.id);
+    h += `<button class="pickrow${i>=0?" on":""}" data-pickgame="${g.id}">
+            <span class="num">${i>=0 ? (i+1) : "&middot;"}</span>
+            <span class="nm">${esc(g.name)}</span>
+            <span class="rg">${esc(g.region)}</span>
+          </button>`;
+  });
+  h += `<button class="log" id="startrun" style="margin-top:16px;width:100%;background:${wipe?"var(--dead)":"var(--live)"};color:#fff;border-color:${wipe?"var(--dead)":"var(--live)"}"${picked.length?"":" disabled"}>
+          ${wipe ? "Wipe everything and start" : "Start the gauntlet"} &middot; ${picked.length} game${picked.length===1?"":"s"}
+        </button>`;
+  if (Array.isArray(S.loadout) && S.loadout.length)
+    h += `<button class="log" id="cancelsetup" style="margin-top:10px;width:100%">${ui.firstRun ? "Just give me every game" : "Cancel, keep what I have"}</button>`;
+  h += `</div>`;
+  applyTheme(S.active);
+  document.getElementById("app").innerHTML = h;
+  wire();
+}
+
 function render(){
+  if (ui.setup) return renderSetup();
   const g = game(), d = gd(), rs = routesOf(), es = entries();
   const living = livingLines();
   const gifts = (d.gifts || []).filter(x => x.species);
@@ -817,7 +865,7 @@ function render(){
           </div>
         </div>
         <div class="screen">`;
-  h += '<div class="gametabs">' + GAMES.map(x =>
+  h += '<div class="gametabs">' + loadoutGames().map(x =>
     `<button data-game="${x.id}" class="${x.id===S.active?"on":""}" style="${(S.games[x.id]&&S.games[x.id].hof)?"box-shadow:inset 0 -3px 0 var(--live)":""}">${x.code}</button>`).join("") + "</div>";
 
   h += `<div class="cap ${over?"over":""}">
@@ -1052,7 +1100,7 @@ function render(){
       h += `</div>`;
     }
     h += `<div class="gaunt"><div class="lbl">The gauntlet</div>`;
-    GAMES.forEach((x,i) => {
+    loadoutGames().forEach((x,i) => {
       const gx = S.games[x.id] || {};
       const done = !!gx.hof;
       const started = !!(Object.keys(gx.log||{}).length || gx.badges || (gx.gifts||[]).length);
@@ -1062,6 +1110,14 @@ function render(){
               <span class="pill ${done?"done":(x.id===S.active?"now":"")}">${done ? esc(gx.hof.date) : (started ? "in progress" : "not started")}</span>
             </div>`;
     });
+    h += `<div style="margin-top:10px;padding-top:12px;border-top:2px dashed var(--rule)">`;
+    if (ui.armReset)
+      h += `<p class="small" style="color:var(--dead);margin:0 0 8px">This starts a whole new gauntlet and deletes every run you have. There is no undo.</p>
+            <div class="row"><button class="log" data-resetgo="1" style="background:var(--dead);color:#fff;border-color:var(--dead)">I understand, continue</button>
+            <button class="log" data-resetcancel="1">Keep my runs</button></div>`;
+    else
+      h += `<button class="log" data-resetarm="1">Change games &middot; new gauntlet</button>`;
+    h += `</div>`;
     h += `</div>`;
   }
 
@@ -1120,7 +1176,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 16</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 17</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -1317,6 +1373,34 @@ function wire(){
   }
   all("[data-qclear]", b => b.onclick = () => { ui.q = ""; SFX.tap(); render(); });
 
+  all("[data-pickgame]", b => b.onclick = () => {
+    ui.pick = ui.pick || [];
+    const id = b.dataset.pickgame, i = ui.pick.indexOf(id);
+    if (i >= 0) ui.pick.splice(i, 1); else ui.pick.push(id);
+    SFX.tap(); renderSetup();
+  });
+  const sr = $("#startrun");
+  if (sr) sr.onclick = () => {
+    if (!ui.pick || !ui.pick.length) return;
+    if (ui.wipeOnStart){
+      if (!confirm("Last check. Every run, graveyard and Hall of Fame will be deleted for good. Continue?")) return;
+      S.games = {}; GAMES.forEach(g => S.games[g.id] = freshGame());
+    }
+    S.loadout = ui.pick.slice();
+    S.active = S.loadout[0];
+    ui.setup = false; ui.pick = null; ui.wipeOnStart = false; ui.armReset = false; ui.firstRun = false;
+    ui.tab = "areas"; ui.filter = "todo"; ui.q = "";
+    SFX.badge(); save(); render();
+  };
+  const cs = $("#cancelsetup");
+  if (cs) cs.onclick = () => { ui.setup = false; ui.pick = null; ui.wipeOnStart = false; ui.armReset = false; ui.firstRun = false; SFX.tap(); render(); };
+  all("[data-resetarm]", b => b.onclick = () => { ui.armReset = true; SFX.tap(); render(); });
+  all("[data-resetcancel]", b => b.onclick = () => { ui.armReset = false; SFX.tap(); render(); });
+  all("[data-resetgo]", b => b.onclick = () => {
+    ui.setup = true; ui.pick = loadout().slice(); ui.wipeOnStart = true; ui.armReset = false;
+    SFX.tap(); renderSetup();
+  });
+
   const ex = $("#export");
   if (ex) ex.onclick = () => {
     const blob = new Blob([JSON.stringify(S,null,2)], {type:"application/json"});
@@ -1368,7 +1452,13 @@ function wire(){
   }
 }
 
+const _fresh = (() => { try { return !localStorage.getItem(KEY); } catch(e){ return false; } })();
 load();
+if (!Array.isArray(S.loadout) || !S.loadout.length) S.loadout = GAMES.map(g => g.id);
+S.loadout = S.loadout.filter(id => GAMES.some(g => g.id === id));
+if (!S.loadout.length) S.loadout = GAMES.map(g => g.id);
+if (S.loadout.indexOf(S.active) < 0) S.active = S.loadout[0];
+if (_fresh){ ui.setup = true; ui.pick = []; ui.firstRun = true; }
 render();
 </script>
 
