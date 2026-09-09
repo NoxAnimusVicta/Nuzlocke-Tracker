@@ -650,16 +650,25 @@ const routesOf = () => game().routes.concat(gd().extra);
 const pool = r => {
   const base = (ENCOUNTERS[S.active] || {})[r] || [];
   const LG = LEGENDS[S.active];
-  const leg = (LG && LG.fixed[r]) ? LG.fixed[r].map(p => p[0]) : [];
+  const cleared = leagueCleared();
+  const leg = (LG && LG.fixed[r]) ? LG.fixed[r].filter(p => p[1] === "" || cleared).map(p => p[0]) : [];
   return leg.length ? leg.concat(base.filter(x => leg.indexOf(x) < 0)) : base;
 };
 
 // an area whose legendaries are all post-game or event stays shut until the League falls
+function leagueCleared(){
+  const g0 = GAMES.find(x => x.id === S.active), d0 = gd();
+  if (!g0) return false;
+  return !!d0.hof || (g0.league.members.length > 0 && (d0.league || []).length >= g0.league.members.length);
+}
+// Only a legendary-only site can be shut. Any route with wild encounters of its
+// own stays open all run; the gated legendary simply is not in the pick list yet.
 function legLocked(r){
   const LG = LEGENDS[S.active];
   const at = LG && LG.fixed[r];
   if (!at || !at.length) return false;
-  return at.every(p => p[1] === "post" || p[1] === "event");
+  if (((ENCOUNTERS[S.active] || {})[r] || []).length) return false;
+  return !leagueCleared() && at.every(p => p[1] === "post" || p[1] === "event");
 }
 
 // the Legends list is a read-out of the area log, never edited directly
@@ -849,12 +858,12 @@ function render(){
   const grave = graveyard();
   const LG = LEGENDS[S.active] || { fixed:{}, roam:[] };
   const LEGHERE = {};
-  Object.keys(LG.fixed).forEach(loc => { LEGHERE[loc] = LG.fixed[loc].map(p => p[0]).join(", "); });
+  Object.keys(LG.fixed).forEach(loc => { LEGHERE[loc] = LG.fixed[loc].map(p => p[0] + (p[1] ? " (" + p[1] + ")" : "")).join(", "); });
   const legList = legendRows();
   const legCaught = legList.filter(x => x.st === "caught" || x.st === "dead").length;
   const legTotal = legList.length;
   const leagueDone = !!d.hof || (g.league.members.length > 0 && (d.league || []).length >= g.league.members.length);
-  const locked = new Set(rs.filter(r => !leagueDone && legLocked(r)));
+  const locked = new Set(rs.filter(r => legLocked(r)));
 
   let h = "";
 
@@ -1101,14 +1110,14 @@ function render(){
       const lg = legCaught;
       h += `<div class="box" style="margin-bottom:12px">
               <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">Legendary hunt</div>
-              <p class="small" style="margin:6px 0 0"><b style="font-size:20px">${lg}</b> caught in ${esc(g.name)}</p>`;
+              <p class="small" style="margin:6px 0 0"><b style="font-size:20px">${lg}</b> of ${legTotal} caught in ${esc(g.name)}</p>`;
       if (d.hof && d.hof.finished)
         h += `<p class="tiny muted" style="margin:6px 0 0">Run closed ${esc(d.hof.finished)} with ${d.hof.legends||0} legendaries.</p>`;
       else if (d.hof)
         h += `<p class="tiny muted" style="margin:6px 0 8px">The League is done. Hunt for as long as you like, then call it.</p>
               <button class="log" data-finish="1">Call the run finished</button>`;
       else
-        h += `<p class="tiny muted" style="margin:6px 0 0">The hunt opens once you have logged the Hall of Fame.</p>`;
+        h += `<p class="tiny muted" style="margin:6px 0 0">Catch them as you go. You can call the run finished once the League is down.</p>`;
       h += `</div>`;
     }
     h += `<div class="gaunt"><div class="lbl">The gauntlet</div>`;
@@ -1188,7 +1197,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 18</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 19</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
