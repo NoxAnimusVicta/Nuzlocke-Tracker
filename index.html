@@ -466,7 +466,7 @@ const GAMES = [
 
 const LEGENDS = {
  firered:{fixed:{"Seafoam Islands":[["Articuno",""]],"Power Plant":[["Zapdos",""]],"Mt. Ember":[["Moltres",""]],"Cerulean Cave":[["Mewtwo","post"]],"Navel Rock":[["Lugia","event"],["Ho-Oh","event"]],"Birth Island":[["Deoxys","event"]]},roam:[["Raikou","post"],["Entei","post"],["Suicune","post"]]},
- soulsilver:{fixed:{"Whirl Islands":[["Lugia",""]],"Bell Tower":[["Suicune",""],["Ho-Oh","post"]],"Seafoam Islands":[["Articuno","post"]],"Power Plant":[["Zapdos","post"]],"Mt. Silver":[["Moltres","post"]],"Cerulean Cave":[["Mewtwo","post"]],"Embedded Tower":[["Groudon","event"]],"Ilex Forest":[["Celebi","event"]],"Sinjoh Ruins":[["Dialga","event"],["Palkia","event"],["Giratina","event"]]},roam:[["Raikou",""],["Entei",""],["Latios","post"]]},
+ soulsilver:{fixed:{"Whirl Islands":[["Lugia",""]],"Bell Tower":[["Suicune",""],["Ho-Oh","post"]],"Seafoam Islands":[["Articuno","post"]],"Power Plant":[["Zapdos","post"]],"Mt. Silver":[["Moltres","post"]],"Cerulean Cave":[["Mewtwo","post"]],"Embedded Tower":[["Groudon","event"],["Rayquaza","event"]],"Ilex Forest":[["Celebi","event"]],"Sinjoh Ruins":[["Dialga","event"],["Palkia","event"],["Giratina","event"]]},roam:[["Raikou",""],["Entei",""],["Latios","post"]]},
  emerald:{fixed:{"Sky Pillar":[["Rayquaza",""]],"Desert Ruins":[["Regirock",""]],"Island Cave":[["Regice",""]],"Ancient Tomb":[["Registeel",""]],"Marine Cave":[["Kyogre","post"]],"Terra Cave":[["Groudon","post"]],"Southern Island":[["Latias","event"],["Latios","event"]],"Navel Rock":[["Lugia","event"],["Ho-Oh","event"]],"Birth Island":[["Deoxys","event"]],"Faraway Island":[["Mew","event"]]},roam:[["Latias","post"],["Latios","post"]]},
  platinum:{fixed:{"Acuity Cavern":[["Uxie",""]],"Valor Cavern":[["Azelf",""]],"Distortion World":[["Giratina",""]],"Turnback Cave":[["Giratina","post"]],"Spear Pillar":[["Dialga","post"],["Palkia","post"]],"Stark Mountain":[["Heatran","post"]],"Snowpoint Temple":[["Regigigas","post"]],"Fullmoon Island":[["Cresselia","post"]],"Newmoon Island":[["Darkrai","event"]],"Flower Paradise":[["Shaymin","event"]],"Hall of Origin":[["Arceus","event"]]},roam:[["Mesprit",""],["Cresselia","post"]]},
  black:{fixed:{"N's Castle":[["Reshiram",""]],"Mistralton Cave":[["Cobalion",""]],"Victory Road":[["Terrakion",""]],"Pinwheel Forest":[["Virizion",""]],"Giant Chasm":[["Kyurem","post"]],"Abundant Shrine":[["Landorus","post"]],"Liberty Garden":[["Victini","event"]]},roam:[["Tornadus",""]]},
@@ -476,18 +476,20 @@ const LEGENDS = {
 
 const STATICS = {
  firered:{"Route 12":[["Snorlax",""]],"Route 16":[["Snorlax",""]],
-   "Power Plant":[["Electrode",""],["Voltorb",""]]},
+   "Power Plant":[["Electrode",""]],"Berry Forest":[["Hypno",""]]},
  soulsilver:{"Route 36":[["Sudowoodo",""]],"Vermilion City":[["Snorlax",""]],
-   "Union Cave":[["Lapras",""]],"Team Rocket HQ":[["Electrode",""]],
-   "Lake of Rage":[["Gyarados",""]]},
- emerald:{"Route 111":[["Sudowoodo",""]],"New Mauville":[["Voltorb",""],["Electrode",""]]},
- platinum:{"Old Chateau":[["Rotom",""]],"Valley Windworks":[["Drifloon",""]],
-   "Route 209":[["Spiritomb",""]],"Fuego Ironworks":[["Magnemite",""]]},
- black:{"Relic Castle":[["Volcarona","post"]]},
- white2:{"Relic Castle":[["Volcarona","post"]]},
+   "Union Cave":[["Lapras",""]],"Team Rocket HQ":[["Electrode",""]]},
+ emerald:{"Route 111":[["Sudowoodo",""]],"New Mauville":[["Voltorb",""]],
+   "Team Aqua Hideout":[["Electrode",""]]},
+ platinum:{"Valley Windworks":[["Drifloon",""]],"Old Chateau":[["Rotom",""]],
+   "Route 209":[["Spiritomb",""]]},
+ black:{"Dreamyard":[["Musharna","post"]],"Desert Resort":[["Darmanitan","event"]],
+   "Relic Castle":[["Volcarona","post"]],"Lostlorn Forest":[["Zoroark","event"]],
+   "Castelia City":[["Zorua","event"]]},
+ white2:{"Seaside Cave":[["Crustle",""]],"Undella Bay":[["Jellicent",""]],
+   "Nature Preserve":[["Haxorus","post"]],"Relic Castle":[["Volcarona","post"]]},
  unbound:{}
 };
-
 GAMES.forEach(g => {
   const LG = LEGENDS[g.id];
   if (!LG) return;
@@ -1221,7 +1223,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 20</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 21</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
