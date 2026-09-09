@@ -488,7 +488,9 @@ const STATICS = {
    "Castelia City":[["Zorua","event"]]},
  white2:{"Seaside Cave":[["Crustle",""]],"Undella Bay":[["Jellicent",""]],
    "Nature Preserve":[["Haxorus","post"]],"Relic Castle":[["Volcarona","post"]]},
- unbound:{}
+ unbound:{"Dehara City":[["Voltorb",""],["Electrode",""]],
+   "Redwood Forest":[["Zoroark",""],["Snorlax","post"]],
+   "Seaport City":[["Mimikyu",""]]}
 };
 GAMES.forEach(g => {
   const LG = LEGENDS[g.id];
@@ -1223,7 +1225,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 21</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 22</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
