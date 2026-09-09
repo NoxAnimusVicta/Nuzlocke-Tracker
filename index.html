@@ -740,6 +740,9 @@ function livingRoster(){
 }
 function enterHof(team){
   const d = gd();
+  // beating the Champion means the whole League is down
+  const mem = (GAMES.find(x => x.id === S.active) || { league:{ members:[] } }).league.members;
+  d.league = mem.map((m, i) => i);
   d.hof = { date:new Date().toISOString().slice(0,10), attempt:d.attempt || 1, team:team,
             deaths:(d.grave || []).filter(x => (x.attempt || 1) === (d.attempt || 1)).length };
   SFX.badge(); save(); render();
@@ -850,7 +853,7 @@ function render(){
   const legList = legendRows();
   const legCaught = legList.filter(x => x.st === "caught" || x.st === "dead").length;
   const legTotal = legList.length;
-  const leagueDone = g.league.members.length > 0 && (d.league || []).length >= g.league.members.length;
+  const leagueDone = !!d.hof || (g.league.members.length > 0 && (d.league || []).length >= g.league.members.length);
   const locked = new Set(rs.filter(r => !leagueDone && legLocked(r)));
 
   let h = "";
@@ -1012,7 +1015,7 @@ function render(){
 
   if (ui.tab === "gifts"){
     const gs = (d.gifts || []);
-    h += `<p class="small muted" style="margin:0 0 12px;max-width:62ch">Gifts, statics and fossils. They cost no area encounter, but the dupes clause still applies and they die like anything else.</p>`;
+    h += `<p class="small muted" style="margin:0 0 12px;max-width:62ch">Gifts, fossils and eggs only &mdash; these cost no area encounter. Statics do, so log those in their own area. The dupes clause still applies and they die like anything else.</p>`;
     if (!gs.length)
       h += `<p class="small muted" style="padding:8px 0">Nothing gifted in ${esc(g.name)} yet.</p>`;
     gs.forEach(x => {
@@ -1025,6 +1028,16 @@ function render(){
         </div>`;
       if (x.caught && x.caught !== x.species)
         h += `<div class="wasline">caught as ${esc(x.caught)}</div>`;
+      if (ui.gmove === String(x.id)){
+        const open = routesOf().filter(r => { const e = gd().log[r] || {}; return !e.species && !e.lost; });
+        h += `<div class="evobox row">
+                <select id="gmovesel" class="grow">${open.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}</select>
+                <button class="log" data-gmovego="${x.id}">Move</button>
+                <button class="log" data-gmovecancel="1">Cancel</button>
+              </div>`;
+      } else {
+        h += `<button class="wasline causeline" data-gmove="${x.id}">move to an area &mdash; it should have cost an encounter</button>`;
+      }
       if (ui.gevolve === String(x.id) && !x.dead)
         h += `<div class="evobox row">
                 <input id="gevoin" class="grow" list="splist" autocomplete="off" placeholder="Evolved into what?" value="">
@@ -1059,9 +1072,8 @@ function render(){
         h += `<li><span class="n">${i+1}</span><span class="species grow">${esc(t.species)}</span><span class="tiny muted">${esc(t.from)}</span></li>`;
       });
       h += `</ol><div class="foot"><button data-hofclear="1">Clear this record</button></div></div>`;
-    } else if (d.badges < 8 || (d.league||[]).length < g.league.members.length){
-      const bl = (d.league||[]).length, tot = g.league.members.length;
-      h += `<div class="box" style="margin-bottom:12px"><p class="small muted" style="margin:0">${d.badges < 8 ? "Win all eight badges, then beat the League." : "Beat the rest of the League &mdash; " + bl + " of " + tot + " down."} Mark them off in Caps.</p></div>`;
+    } else if (d.badges < 8){
+      h += `<div class="box" style="margin-bottom:12px"><p class="small muted" style="margin:0">Win all eight badges, beat the League, then log the team that finished ${esc(g.name)}. You can tick the Elite Four off in Caps as you go, but you do not have to.</p></div>`;
     } else {
       const roster = livingRoster();
       const auto = roster.length <= 6;
@@ -1176,7 +1188,7 @@ function render(){
           <button id="export">Export backup</button>
           <button id="import">Import</button>
           <button id="mute" class="sndbtn ${muted?"off":"on"}" title="${muted?"Sound off":"Sound on"}" aria-label="${muted?"Sound off":"Sound on"}" aria-pressed="${muted?"false":"true"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="stem" d="M9.6 16.9V5.7l8.4-1.7v11.2"/><path class="head" d="M9.6 5.7 18 4v2.7L9.6 8.4z"/><circle class="head" cx="7.3" cy="17.2" r="2.5"/><circle class="head" cx="15.7" cy="15.4" r="2.5"/><line class="slash" x1="3.8" y1="20.2" x2="20.2" y2="3.8"/></svg></button>
-          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 17</span>
+          <span id="status"></span><span class="tiny" style="margin-left:auto;opacity:.65">build 18</span>
         </footer>
         <input type="file" id="file" accept="application/json" style="display:none">
 `;
@@ -1399,6 +1411,28 @@ function wire(){
   all("[data-resetgo]", b => b.onclick = () => {
     ui.setup = true; ui.pick = loadout().slice(); ui.wipeOnStart = true; ui.armReset = false;
     SFX.tap(); renderSetup();
+  });
+
+  all("[data-gmove]", b => b.onclick = () => {
+    const id = b.dataset.gmove;
+    ui.gmove = ui.gmove === id ? null : id; ui.gevolve = null; ui.gcause = null;
+    SFX.tap(); render();
+  });
+  all("[data-gmovecancel]", b => b.onclick = () => { ui.gmove = null; SFX.tap(); render(); });
+  all("[data-gmovego]", b => b.onclick = () => {
+    const id = b.dataset.gmovego, sel = $("#gmovesel");
+    if (!sel || !sel.value) return;
+    const r = sel.value, gs = gd().gifts || [];
+    const i = gs.findIndex(y => String(y.id) === String(id));
+    if (i < 0) return;
+    const e0 = gd().log[r] || {};
+    if (e0.species || e0.lost) return;
+    const x = gs[i];
+    if (x.gid) gd().grave = (gd().grave || []).filter(z => z.id !== x.gid);
+    gs.splice(i, 1);
+    gd().log[r] = { species:x.species, dead:false, caught:x.caught, cause:x.cause || "" };
+    if (x.dead) markDead(r);
+    ui.gmove = null; SFX.catch(); save(); render();
   });
 
   const ex = $("#export");
